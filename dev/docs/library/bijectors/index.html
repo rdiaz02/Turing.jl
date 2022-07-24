@@ -827,14 +827,13 @@
   <li><a href="/dev/docs/library/bijectors/#Bijectors.couple-Tuple{Bijectors.Coupling, AbstractVector}"><code class="language-plaintext highlighter-rouge">Bijectors.couple</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.coupling-Tuple{Bijectors.Coupling}"><code class="language-plaintext highlighter-rouge">Bijectors.coupling</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.find_alpha-Tuple{Real, Real, Real}"><code class="language-plaintext highlighter-rouge">Bijectors.find_alpha</code></a></li>
-  <li><a href="/dev/docs/library/bijectors/#Bijectors.forward-Tuple{Bijector, Any}"><code class="language-plaintext highlighter-rouge">Bijectors.forward</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.forward-Tuple{Distribution}"><code class="language-plaintext highlighter-rouge">Bijectors.forward</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.get_u_hat-Tuple{AbstractVector{&lt;:Real}, AbstractVector{&lt;:Real}}"><code class="language-plaintext highlighter-rouge">Bijectors.get_u_hat</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.isclosedform-Tuple{Bijector}"><code class="language-plaintext highlighter-rouge">Bijectors.isclosedform</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.logabsdetjac-Tuple{Inverse, Any}"><code class="language-plaintext highlighter-rouge">Bijectors.logabsdetjac</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.logabsdetjac-Tuple{ADBijector, Real}"><code class="language-plaintext highlighter-rouge">Bijectors.logabsdetjac</code></a></li>
-  <li><a href="/dev/docs/library/bijectors/#Bijectors.logabsdetjacinv-Tuple{UnivariateTransformed, Real}"><code class="language-plaintext highlighter-rouge">Bijectors.logabsdetjacinv</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.logabsdetjacinv-Tuple{Bijector, Any}"><code class="language-plaintext highlighter-rouge">Bijectors.logabsdetjacinv</code></a></li>
+  <li><a href="/dev/docs/library/bijectors/#Bijectors.logabsdetjacinv-Tuple{UnivariateTransformed, Real}"><code class="language-plaintext highlighter-rouge">Bijectors.logabsdetjacinv</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.logpdf_with_jac-Tuple{UnivariateTransformed, Real}"><code class="language-plaintext highlighter-rouge">Bijectors.logpdf_with_jac</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.ordered-Tuple{Distribution{Multivariate, Continuous}}"><code class="language-plaintext highlighter-rouge">Bijectors.ordered</code></a></li>
   <li><a href="/dev/docs/library/bijectors/#Bijectors.partition-Tuple{Bijectors.PartitionMask, Any}"><code class="language-plaintext highlighter-rouge">Bijectors.partition</code></a></li>
@@ -990,16 +989,6 @@ end
 
 <p>D. Rezende, S. Mohamed (2015): Variational Inference with Normalizing Flows. arXiv:1505.05770</p>
 
-<p><a id="Bijectors.forward-Tuple{Bijector, Any}" href="#Bijectors.forward-Tuple{Bijector, Any}">#</a>
-<strong><code class="language-plaintext highlighter-rouge">Bijectors.forward</code></strong> — <em>Method</em>.</p>
-
-<div class="language-julia highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">forward</span><span class="x">(</span><span class="n">b</span><span class="o">::</span><span class="n">Bijector</span><span class="x">,</span> <span class="n">x</span><span class="x">)</span>
-</code></pre></div></div>
-
-<p>Computes both <code class="language-plaintext highlighter-rouge">transform</code> and <code class="language-plaintext highlighter-rouge">logabsdetjac</code> in one forward pass, and returns a named tuple <code class="language-plaintext highlighter-rouge">(rv=b(x), logabsdetjac=logabsdetjac(b, x))</code>.</p>
-
-<p>This defaults to the call above, but often one can re-use computation in the computation of the forward pass and the computation of the <code class="language-plaintext highlighter-rouge">logabsdetjac</code>. <code class="language-plaintext highlighter-rouge">forward</code> allows the user to take advantange of such efficiencies, if they exist.</p>
-
 <p><a id="Bijectors.forward-Tuple{Distribution}" href="#Bijectors.forward-Tuple{Distribution}">#</a>
 <strong><code class="language-plaintext highlighter-rouge">Bijectors.forward</code></strong> — <em>Method</em>.</p>
 
@@ -1086,7 +1075,7 @@ end
 <div class="language-julia highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">logabsdetjacinv</span><span class="x">(</span><span class="n">b</span><span class="o">::</span><span class="n">Bijector</span><span class="x">,</span> <span class="n">y</span><span class="x">)</span>
 </code></pre></div></div>
 
-<p>Just an alias for <code class="language-plaintext highlighter-rouge">logabsdetjac(inv(b), y)</code>.</p>
+<p>Just an alias for <code class="language-plaintext highlighter-rouge">logabsdetjac(inverse(b), y)</code>.</p>
 
 <p><a id="Bijectors.logabsdetjacinv-Tuple{UnivariateTransformed, Real}" href="#Bijectors.logabsdetjacinv-Tuple{UnivariateTransformed, Real}">#</a>
 <strong><code class="language-plaintext highlighter-rouge">Bijectors.logabsdetjacinv</code></strong> — <em>Method</em>.</p>
@@ -1134,6 +1123,16 @@ end
 
 <p>If no bijector is provided, i.e. <code class="language-plaintext highlighter-rouge">transformed(d)</code> is called, then  <code class="language-plaintext highlighter-rouge">transformed(d, bijector(d))</code> is returned.</p>
 
+<p><a id="ChangesOfVariables.with_logabsdet_jacobian-Tuple{Bijector, Any}" href="#ChangesOfVariables.with_logabsdet_jacobian-Tuple{Bijector, Any}">#</a>
+<strong><code class="language-plaintext highlighter-rouge">ChangesOfVariables.with_logabsdet_jacobian</code></strong> — <em>Method</em>.</p>
+
+<div class="language-julia highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">with_logabsdet_jacobian</span><span class="x">(</span><span class="n">b</span><span class="o">::</span><span class="n">Bijector</span><span class="x">,</span> <span class="n">x</span><span class="x">)</span>
+</code></pre></div></div>
+
+<p>Computes both <code class="language-plaintext highlighter-rouge">transform</code> and <code class="language-plaintext highlighter-rouge">logabsdetjac</code> in one forward pass, and returns a named tuple <code class="language-plaintext highlighter-rouge">(b(x), logabsdetjac(b, x))</code>.</p>
+
+<p>This defaults to the call above, but often one can re-use computation in the computation of the forward pass and the computation of the <code class="language-plaintext highlighter-rouge">logabsdetjac</code>. <code class="language-plaintext highlighter-rouge">forward</code> allows the user to take advantange of such efficiencies, if they exist.</p>
+
 <p><a id="Types"></a></p>
 
 <p><a id="Types-1"></a></p>
@@ -1174,7 +1173,7 @@ end
 
 <p>A <code class="language-plaintext highlighter-rouge">Bijector</code> representing composition of bijectors. <code class="language-plaintext highlighter-rouge">composel</code> and <code class="language-plaintext highlighter-rouge">composer</code> results in a <code class="language-plaintext highlighter-rouge">Composed</code> for which application occurs from left-to-right and right-to-left, respectively.</p>
 
-<p>Note that all the alternative ways of constructing a <code class="language-plaintext highlighter-rouge">Composed</code> returns a <code class="language-plaintext highlighter-rouge">Tuple</code> of bijectors. This ensures type-stability of implementations of all relating methdos, e.g. <code class="language-plaintext highlighter-rouge">inv</code>.</p>
+<p>Note that all the alternative ways of constructing a <code class="language-plaintext highlighter-rouge">Composed</code> returns a <code class="language-plaintext highlighter-rouge">Tuple</code> of bijectors. This ensures type-stability of implementations of all relating methdos, e.g. <code class="language-plaintext highlighter-rouge">inverse</code>.</p>
 
 <p>If you want to use an <code class="language-plaintext highlighter-rouge">Array</code> as the container instead you can do</p>
 
@@ -1200,7 +1199,7 @@ Composed{Tuple{Exp{0},Exp{0}},0}((Exp{0}(), Exp{0}()))
 julia&gt; (b ∘ b)(1.0) == exp(exp(1.0))    # evaluation
 true
 
-julia&gt; inv(b ∘ b)(exp(exp(1.0))) == 1.0 # inversion
+julia&gt; inverse(b ∘ b)(exp(exp(1.0))) == 1.0 # inversion
 true
 
 julia&gt; logabsdetjac(b ∘ b, 1.0)         # determinant of jacobian
@@ -1329,7 +1328,7 @@ julia&gt; cl(x)
  2.0
  3.0
 
-julia&gt; inv(cl)(cl(x))
+julia&gt; inverse(cl)(cl(x))
 3-element Array{Float64,1}:
  1.0
  2.0
@@ -1349,7 +1348,7 @@ Shift{Array{Float64,1},1}([2.0])
 <p><a id="Bijectors.Inverse" href="#Bijectors.Inverse">#</a>
 <strong><code class="language-plaintext highlighter-rouge">Bijectors.Inverse</code></strong> — <em>Type</em>.</p>
 
-<div class="language-julia highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">inv</span><span class="x">(</span><span class="n">b</span><span class="o">::</span><span class="n">Bijector</span><span class="x">)</span>
+<div class="language-julia highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">inverse</span><span class="x">(</span><span class="n">b</span><span class="o">::</span><span class="n">Bijector</span><span class="x">)</span>
 <span class="n">Inverse</span><span class="x">(</span><span class="n">b</span><span class="o">::</span><span class="n">Bijector</span><span class="x">)</span>
 </code></pre></div></div>
 
@@ -1589,10 +1588,10 @@ julia&gt; b4([1., 2., 3.])
  1.0
  3.0
 
-julia&gt; inv(b1)
+julia&gt; inverse(b1)
 Permute{LinearAlgebra.Transpose{Int64,Array{Int64,2}}}([0 1 0; 1 0 0; 0 0 1])
 
-julia&gt; inv(b1)(b1([1., 2., 3.]))
+julia&gt; inverse(b1)(b1([1., 2., 3.]))
 3-element Array{Float64,1}:
  1.0
  2.0

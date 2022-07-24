@@ -870,7 +870,7 @@
 
 <p>This would allow us to generate a model by calling <code class="language-plaintext highlighter-rouge">gauss(; x = rand(3))</code>.</p>
 
-<p>If an argument has a default value <code class="language-plaintext highlighter-rouge">missing</code>, it is treated as a random variable. For variables which require an intialization because we need to loop or broadcast over its elements, such as <code class="language-plaintext highlighter-rouge">x</code> above, the following needs to be done:</p>
+<p>If an argument has a default value <code class="language-plaintext highlighter-rouge">missing</code>, it is treated as a random variable. For variables which require an initialization because we need to loop or broadcast over its elements, such as <code class="language-plaintext highlighter-rouge">x</code> above, the following needs to be done:</p>
 
 <div class="language-julia highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="n">x</span> <span class="o">===</span> <span class="nb">missing</span>
     <span class="n">x</span> <span class="o">=</span> <span class="o">...</span>

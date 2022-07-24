@@ -7,8 +7,8 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Probabilistic Modelling using the Infinite Mixture Model</title>
-    <meta name="description" content="In many applications it is desirable to allow the model to adjust its complexity to the amount the data. Consider for example the task of assigning objects i...">
+    <title>Bayesian Time Series Analysis</title>
+    <meta name="description" content="In time series analysis we are often interested in understanding how various real-life circumstances impact our quantity of interest.These can be, for instan...">
     <meta name="author" content="The Turing Team">
     <meta name="theme-color" content="red">
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
@@ -17,7 +17,7 @@
     <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="canonical" href="/dev/tutorials/06-infinite-mixture-model/">
+    <link rel="canonical" href="/dev/tutorials/13-seasonal-time-series/">
     <link rel="alternate" type="application/rss+xml" title="Turing.jl" href="/dev/feed.xml">
     <meta name="lang:clipboard.copy" content="Copy to clipboard">
     <meta name="lang:clipboard.copied" content="Copied to clipboard">
@@ -54,7 +54,7 @@
 
     <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off>
     <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off>
-    <label class=md-overlay data-md-component=overlay for=__drawer></label> <a href="#probabilistic-modelling-using-the-infinite-mixture-model" tabindex=1 class=md-skip> Skip to content </a>
+    <label class=md-overlay data-md-component=overlay for=__drawer></label> <a href="#bayesian-time-series-analysis" tabindex=1 class=md-skip> Skip to content </a>
     <header class=md-header data-md-component=header data-md-state=none>
         <nav class="md-header-nav md-grid">
             <div class=md-flex>
@@ -781,10 +781,10 @@
         <ul id="nav-toc" class="md-nav__list" data-md-scrollfix="">
         <!-- toc will be appended here!-->
         </ul>
-        <a href="https://twitter.com/intent/tweet?original_referer=https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/06-infinite-mixture-model/06_infinite-mixture-model.jmd" title="Tweet this page" class="social-link"><i class="fa fa-twitter fa-1x"></i>Tweet this page</a>
+        <a href="https://twitter.com/intent/tweet?original_referer=https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/13-seasonal-time-series/13_seasonal_time_series.jmd" title="Tweet this page" class="social-link"><i class="fa fa-twitter fa-1x"></i>Tweet this page</a>
         <a href="https://discourse.julialang.org/c/domain/probprog" title="Ask questions" class="social-link"><i class="fa fa-stack-overflow fa-1x"></i>Ask questions</a>
-        <a href="https://github.com/TuringLang/Turing.jl//issues/new?label=question&title=Question:&body=Question%20on:%20https://github.com/TuringLang/Turing.jl/edit/master/docs/_tutorials/06-infinite-mixture-model/06_infinite-mixture-model.jmd" title="Report issues" class="social-link"><i class="fa fa-comments fa-1x"></i>Report issues</a>
-        <a href="https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/06-infinite-mixture-model/06_infinite-mixture-model.jmd" title="Edit this page on github"  class="social-link"><i class="fa fa-github fa-1x"></i> Edit me</a>
+        <a href="https://github.com/TuringLang/Turing.jl//issues/new?label=question&title=Question:&body=Question%20on:%20https://github.com/TuringLang/Turing.jl/edit/master/docs/_tutorials/13-seasonal-time-series/13_seasonal_time_series.jmd" title="Report issues" class="social-link"><i class="fa fa-comments fa-1x"></i>Report issues</a>
+        <a href="https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/13-seasonal-time-series/13_seasonal_time_series.jmd" title="Edit this page on github"  class="social-link"><i class="fa fa-github fa-1x"></i> Edit me</a>
       </nav>
     </div>
   </div>
@@ -793,273 +793,321 @@
                 <div id="md-container-pancakes">
                 <div class="md-content full-width"> 
     <article class="md-content__inner md-typeset  full-width">
-    In many applications it is desirable to allow the model to adjust its complexity to the amount the data. Consider for example the task of assigning objects into clusters or groups. This task often involves the specification of the number of groups. However, often times it is not known beforehand how many groups exist. Moreover, in some applictions, e.g. modelling topics in text documents or grouping species, the number of examples per group is heavy tailed. This makes it impossible to predefine the number of groups and requiring the model to form new groups when data points from previously unseen groups are observed.
+    In time series analysis we are often interested in understanding how various real-life circumstances impact our quantity of interest.
+These can be, for instance, season, day of week, or time of day.
+To analyse this it is useful to decompose time series into simpler components (corresponding to relevant circumstances)
+and infer their relevance.
+In this tutorial we are going to use Turing for time series analysis and learn about useful ways to decompose time series.
 
-A natural approach for such applications is the use of non-parametric models. This tutorial will introduce how to use the Dirichlet process in a mixture of infinitely many Gaussians using Turing. For further information on Bayesian nonparametrics and the Dirichlet process we refer to the [introduction by Zoubin Ghahramani](http://mlg.eng.cam.ac.uk/pub/pdf/Gha12.pdf) and the book "Fundamentals of Nonparametric Bayesian Inference" by Subhashis Ghosal and Aad van der Vaart.
+# Modelling time series
+
+Before we start coding, let us talk about what exactly we mean with time series decomposition.
+In a nutshell, it is a divide-and-conquer approach where we express a time series as a sum or a product of simpler series.
+For instance, the time series $f(t)$ can be decomposed into a sum of $n$ components
+
+$$f(t) = \sum_{i=1}^n f_i(t),$$
+
+or we can decompose $g(t)$ into a product of $m$ components
+
+$$g(t) = \sum_{i=1}^m g_i(t).$$
+
+We refer to this as *additive* or *multiplicative* decomposition respectively.
+This type of decomposition is great since it lets us reason about individual components, which makes encoding prior information and interpreting model predictions very easy.
+Two common components are *trends*, which represent the overall change of the time series (often assumed to be linear),
+and *cyclic effects* which contribute oscillating effects around the trend.
+Let us simulate some data with an additive linear trend and oscillating effects.
 
 ```julia
-using Turing
+using StatsPlots, Turing, Statistics, LinearAlgebra, Random
+Random.seed!(12345)
+true_sin_freq = 2
+true_sin_amp = 5
+true_cos_freq = 7
+true_cos_amp = 2.5
+tmax = 10
+β_true = 2
+α_true = -1
+tt = 0:0.05:tmax
+f₁(t) = α_true + β_true * t
+f₂(t) = true_sin_amp * sinpi(2 * t * true_sin_freq / tmax)
+f₃(t) = true_cos_amp * cospi(2 * t * true_cos_freq / tmax)
+f(t) = f₁(t) + f₂(t) + f₃(t)
+
+plot(f, tt; label="f(t)", title="Observed time series", legend=:topleft, linewidth=3)
+plot!(
+    [f₁, f₂, f₃],
+    tt;
+    label=["f₁(t)" "f₂(t)" "f₃(t)"],
+    style=[:dot :dash :dashdot],
+    linewidth=1,
+)
 ```
 
-## Mixture Model
-
-Before introducing infinite mixture models in Turing, we will briefly review the construction of finite mixture models. Subsequently, we will define how to use the [Chinese restaurant process](https://en.wikipedia.org/wiki/Chinese_restaurant_process) construction of a Dirichlet process for non-parametric clustering.
-
-#### Two-Component Model
-
-First, consider the simple case of a mixture model with two Gaussian components with fixed covariance.
-The generative process of such a model can be written as:
-
-\begin{equation*}
-\begin{aligned}
-\pi_1 &\sim \mathrm{Beta}(a, b) \\
-\pi_2 &= 1-\pi_1 \\
-\mu_1 &\sim \mathrm{Normal}(\mu_0, \Sigma_0) \\
-\mu_2 &\sim \mathrm{Normal}(\mu_0, \Sigma_0) \\
-z_i &\sim \mathrm{Categorical}(\pi_1, \pi_2) \\
-x_i &\sim \mathrm{Normal}(\mu_{z_i}, \Sigma)
-\end{aligned}
-\end{equation*}
-
-where $\pi_1, \pi_2$ are the mixing weights of the mixture model, i.e. $\pi_1 + \pi_2 = 1$, and $z_i$ is a latent assignment of the observation $x_i$ to a component (Gaussian).
-
-We can implement this model in Turing for 1D data as follows:
+Even though we use simple components, combining them can give rise to fairly complex time series.
+In this time series, cyclic effects are just added on top of the trend.
+If we instead multiply the components the cyclic effects cause the series to oscillate
+between larger and larger values, since they get scaled by the trend.
 
 ```julia
-@model function two_model(x)
-    # Hyper-parameters
-    μ0 = 0.0
-    σ0 = 1.0
+g(t) = f₁(t) * f₂(t) * f₃(t)
 
-    # Draw weights.
-    π1 ~ Beta(1, 1)
-    π2 = 1 - π1
+plot(g, tt; label="f(t)", title="Observed time series", legend=:topleft, linewidth=3)
+plot!([f₁, f₂, f₃], tt; label=["f₁(t)" "f₂(t)" "f₃(t)"], linewidth=1)
+```
 
-    # Draw locations of the components.
-    μ1 ~ Normal(μ0, σ0)
-    μ2 ~ Normal(μ0, σ0)
+Unlike $f$, $g$ oscillates around $0$ since it is being multiplied with sines and cosines.
+To let a multiplicative decomposition oscillate around the trend we could define it as
+$\tilde{g}(t) = f₁(t) * (1 + f₂(t)) * (1 + f₃(t)),$
+but for convenience we will leave it as is.
+The inference machinery is the same for both cases.
 
-    # Draw latent assignment.
-    z ~ Categorical([π1, π2])
+# Model fitting
 
-    # Draw observation from selected component.
-    if z == 1
-        x ~ Normal(μ1, 1.0)
-    else
-        x ~ Normal(μ2, 1.0)
-    end
+Having discussed time series decomposition, let us fit a model to the time series above and recover the true parameters.
+Before building our model, we standardise the time axis to $[0, 1]$ and subtract the max of the time series.
+This helps convergence while maintaining interpretability and the correct scales for the cyclic components.
+
+```julia
+σ_true = 0.35
+t = collect(tt[begin:3:end])
+t_min, t_max = extrema(t)
+x = (t .- t_min) ./ (t_max - t_min)
+yf = f.(t) .+ σ_true .* randn(size(t))
+yf_max = maximum(yf)
+yf = yf .- yf_max
+
+scatter(x, yf; title="Standardised data", legend=false)
+```
+
+Let us now build our model.
+We want to assume a linear trend, and cyclic effects.
+Encoding a linear trend is easy enough, but what about cyclical effects?
+We will take a scattergun approach, and create multiple cyclical features using both sine and cosine functions and let our inference machinery figure out which to keep.
+To do this, we define how long a one period should be, and create features in reference to said period.
+How long a period should be is problem dependent, but as an example let us say it is $1$ year.
+If we then find evidence for a cyclic effect with a frequency of 2, that would mean a biannual effect. A frequency of 4 would mean quarterly etc.
+Since we are using synthetic data, we are simply going to let the period be 1, which is the entire length of the time series.
+
+```julia
+freqs = 1:10
+num_freqs = length(freqs)
+period = 1
+cyclic_features = [sinpi.(2 .* freqs' .* x ./ period) cospi.(2 .* freqs' .* x ./ period)]
+
+plot_freqs = [1, 3, 5]
+freq_ptl = plot(
+    cyclic_features[:, plot_freqs];
+    label=permutedims(["sin(2π$(f)x)" for f in plot_freqs]),
+    title="Cyclical features subset",
+)
+```
+
+Having constructed the cyclical features, we can finally build our model. The model we will implement looks like this
+
+$$
+f(t) = \alpha + \beta_t t + \sum_{i=1}^F \beta_{\sin{},i} \sin{}(2\pi f_i t) + \sum_{i=1}^F \beta_{\cos{},i} \cos{}(2\pi f_i t),
+$$
+
+with a Gaussian likelihood $y \sim \mathcal{N}(f(t), \sigma^2)$.
+For convenience we are treating the cyclical feature weights $\beta_{\sin{},i}$ and $\beta_{\cos{},i}$ the same in code and weight them with $\beta_c$.
+And just because it is so easy, we parameterise our model with the operation with which to apply the cyclic effects.
+This lets us use the exact same code for both additive and multiplicative models.
+Finally, we plot prior predictive samples to make sure our priors make sense.
+
+```julia
+@model function decomp_model(t, c, op)
+    α ~ Normal(0, 10)
+    βt ~ Normal(0, 2)
+    βc ~ MvNormal(zeros(size(c, 2)), I)
+    σ ~ truncated(Normal(0, 0.1); lower=0)
+
+    cyclic = c * βc
+    trend = α .+ βt .* t
+    μ = op(trend, cyclic)
+    y ~ MvNormal(μ, σ^2 * I)
+    return (; trend, cyclic)
 end
-```
 
-#### Finite Mixture Model
-
-If we have more than two components, this model can elegantly be extend using a Dirichlet distribution as prior for the mixing weights $\pi_1, \dots, \pi_K$. Note that the Dirichlet distribution is the multivariate generalization of the beta distribution. The resulting model can be written as:
-
-$$
-\begin{align}
-(\pi_1, \dots, \pi_K) &\sim Dirichlet(K, \alpha) \\
-\mu_k &\sim \mathrm{Normal}(\mu_0, \Sigma_0), \;\; \forall k \\
-z &\sim Categorical(\pi_1, \dots, \pi_K) \\
-x &\sim \mathrm{Normal}(\mu_z, \Sigma)
-\end{align}
-$$
-
-which resembles the model in the [Gaussian mixture model tutorial](https://turing.ml/dev/tutorials/1-gaussianmixturemodel/) with a slightly different notation.
-
-## Infinite Mixture Model
-
-The question now arises, is there a generalization of a Dirichlet distribution for which the dimensionality $K$ is infinite, i.e. $K = \infty$?
-
-But first, to implement an infinite Gaussian mixture model in Turing, we first need to load the `Turing.RandomMeasures` module. `RandomMeasures` contains a variety of tools useful in nonparametrics.
-
-```julia
-using Turing.RandomMeasures
-```
-
-We now will utilize the fact that one can integrate out the mixing weights in a Gaussian mixture model allowing us to arrive at the Chinese restaurant process construction. See Carl E. Rasmussen: [The Infinite Gaussian Mixture Model](https://www.seas.harvard.edu/courses/cs281/papers/rasmussen-1999a.pdf), NIPS (2000) for details.
-
-In fact, if the mixing weights are integrated out, the conditional prior for the latent variable $z$ is given by:
-
-$$
-p(z_i = k \mid z_{\not i}, \alpha) = \frac{n_k + \alpha K}{N - 1 + \alpha}
-$$
-
-where $z_{\not i}$ are the latent assignments of all observations except observation $i$. Note that we use $n_k$ to denote the number of observations at component $k$ excluding observation $i$. The parameter $\alpha$ is the concentration parameter of the Dirichlet distribution used as prior over the mixing weights.
-
-#### Chinese Restaurant Process
-
-To obtain the Chinese restaurant process construction, we can now derive the conditional prior if $K \rightarrow \infty$.
-
-For $n_k > 0$ we obtain:
-
-$$
-p(z_i = k \mid z_{\not i}, \alpha) = \frac{n_k}{N - 1 + \alpha}
-$$
-
-and for all infinitely many clusters that are empty (combined) we get:
-
-$$
-p(z_i = k \mid z_{\not i}, \alpha) = \frac{\alpha}{N - 1 + \alpha}
-$$
-
-Those equations show that the conditional prior for component assignments is proportional to the number of such observations, meaning that the Chinese restaurant process has a rich get richer property.
-
-To get a better understanding of this property, we can plot the cluster choosen by for each new observation drawn from the conditional prior.
-
-```julia
-# Concentration parameter.
-α = 10.0
-
-# Random measure, e.g. Dirichlet process.
-rpm = DirichletProcess(α)
-
-# Cluster assignments for each observation.
-z = Vector{Int}()
-
-# Maximum number of observations we observe.
-Nmax = 500
-
-for i in 1:Nmax
-    # Number of observations per cluster.
-    K = isempty(z) ? 0 : maximum(z)
-    nk = Vector{Int}(map(k -> sum(z .== k), 1:K))
-
-    # Draw new assignment.
-    push!(z, rand(ChineseRestaurantProcess(rpm, nk)))
+y_prior_samples = mapreduce(hcat, 1:100) do _
+    rand(decomp_model(t, cyclic_features, +)).y
 end
+plot(t, y_prior_samples; linewidth=1, alpha=0.5, color=1, label="", title="Prior samples")
+scatter!(t, yf; color=2, label="Data")
 ```
 
-```julia
-using Plots
+With the model specified and with a reasonable prior we can now let Turing decompose the time series for us!
 
-# Plot the cluster assignments over time 
-@gif for i in 1:Nmax
-    scatter(
-        collect(1:i),
-        z[1:i];
-        markersize=2,
-        xlabel="observation (i)",
-        ylabel="cluster (k)",
-        legend=false,
+```julia; fig_ext = ".png"
+function mean_ribbon(samples)
+    qs = quantile(samples)
+    low = qs[:, Symbol("2.5%")]
+    up = qs[:, Symbol("97.5%")]
+    m = mean(samples)[:, :mean]
+    return m, (m - low, up - m)
+end
+
+function get_decomposition(model, x, cyclic_features, chain, op)
+    chain_params = Turing.MCMCChains.get_sections(chain, :parameters)
+    return generated_quantities(model(x, cyclic_features, op), chain_params)
+end
+
+function plot_fit(x, y, decomp, ymax)
+    trend = mapreduce(x -> x.trend, hcat, decomp)
+    cyclic = mapreduce(x -> x.cyclic, hcat, decomp)
+
+    trend_plt = plot(
+        x,
+        trend .+ ymax;
+        color=1,
+        label=nothing,
+        alpha=0.2,
+        title="Trend",
+        xlabel="Time",
+        ylabel="f₁(t)",
+    )
+    ls = [ones(length(t)) t] \ y
+    α̂, β̂ = ls[1], ls[2:end]
+    plot!(
+        trend_plt,
+        t,
+        α̂ .+ t .* β̂ .+ ymax;
+        label="Least squares trend",
+        color=5,
+        linewidth=4,
+    )
+
+    scatter!(trend_plt, x, y .+ ymax; label=nothing, color=2, legend=:topleft)
+    cyclic_plt = plot(
+        x,
+        cyclic;
+        color=1,
+        label=nothing,
+        alpha=0.2,
+        title="Cyclic effect",
+        xlabel="Time",
+        ylabel="f₂(t)",
+    )
+    return trend_plt, cyclic_plt
+end
+
+chain = sample(decomp_model(x, cyclic_features, +) | (; y=yf), NUTS(), 2000)
+yf_samples = predict(decomp_model(x, cyclic_features, +), chain)
+m, conf = mean_ribbon(yf_samples)
+predictive_plt = plot(
+    t,
+    m .+ yf_max;
+    ribbon=conf,
+    label="Posterior density",
+    title="Posterior decomposition",
+    xlabel="Time",
+    ylabel="f(t)",
+)
+scatter!(predictive_plt, t, yf .+ yf_max; color=2, label="Data", legend=:topleft)
+
+decomp = get_decomposition(decomp_model, x, cyclic_features, chain, +)
+decomposed_plt = plot_fit(t, yf, decomp, yf_max)
+plot(predictive_plt, decomposed_plt...; layout=(3, 1), size=(700, 1000))
+```
+
+```julia, echo=false
+@assert isapprox(mean(chain, :βt) / t_max, β_true; atol=0.5)
+@assert isapprox(mean(chain, :α) + yf_max, α_true; atol=1.0)
+@assert isapprox(mean(chain, :σ), σ_true; atol=0.1)
+@assert isapprox(mean(chain, "βc[2]"), true_sin_amp; atol=0.5)
+@assert isapprox(mean(chain, "βc[17]"), true_cos_amp; atol=0.5)
+```
+
+Inference is successful and the posterior beautifully captures the data.
+We see that the least squares linear fit deviates somewhat from the posterior trend.
+Since our model takes cyclic effects into account separately,
+we get a better estimate of the true overall trend than if we would have just fitted a line.
+But what frequency content did the model identify?
+
+```julia
+function plot_cyclic_features(βsin, βcos)
+    labels = reshape(["freq = $i" for i in freqs], 1, :)
+    colors = collect(freqs)'
+    style = reshape([i <= 10 ? :solid : :dash for i in 1:length(labels)], 1, :)
+    sin_features_plt = density(
+        βsin[:, :, 1];
+        title="Sine features posterior",
+        label=labels,
+        ylabel="Density",
+        xlabel="Weight",
+        color=colors,
+        linestyle=style,
+        legend=nothing,
+    )
+    cos_features_plt = density(
+        βcos[:, :, 1];
+        title="Cosine features posterior",
+        ylabel="Density",
+        xlabel="Weight",
+        label=nothing,
+        color=colors,
+        linestyle=style,
+    )
+
+    return seasonal_features_plt = plot(
+        sin_features_plt,
+        cos_features_plt;
+        layout=(2, 1),
+        size=(800, 600),
+        legend=:outerright,
     )
 end
+
+βc = Array(group(chain, :βc))
+plot_cyclic_features(βc[:, begin:num_freqs, :], βc[:, (num_freqs + 1):end, :])
 ```
 
-Further, we can see that the number of clusters is logarithmic in the number of observations and data points. This is a side-effect of the "rich-get-richer" phenomenon, i.e. we expect large clusters and thus the number of clusters has to be smaller than the number of observations.
+Plotting the posterior over the cyclic features reveals that the model managed to extract the true frequency content.
 
-$$
-\mathbb{E}[K \mid N] \approx \alpha \cdot log \big(1 + \frac{N}{\alpha}\big)
-$$
-
-We can see from the equation that the concentration parameter $\alpha$ allows us to control the number of clusters formed *a priori*.
-
-In Turing we can implement an infinite Gaussian mixture model using the Chinese restaurant process construction of a Dirichlet process as follows:
+Since we wrote our model to accept a combining operator, we can easily run the same analysis for a multiplicative model.
 
 ```julia
-@model function infiniteGMM(x)
-    # Hyper-parameters, i.e. concentration parameter and parameters of H.
-    α = 1.0
-    μ0 = 0.0
-    σ0 = 1.0
+yg = g.(t) .+ σ_true .* randn(size(t))
 
-    # Define random measure, e.g. Dirichlet process.
-    rpm = DirichletProcess(α)
-
-    # Define the base distribution, i.e. expected value of the Dirichlet process.
-    H = Normal(μ0, σ0)
-
-    # Latent assignment.
-    z = tzeros(Int, length(x))
-
-    # Locations of the infinitely many clusters.
-    μ = tzeros(Float64, 0)
-
-    for i in 1:length(x)
-
-        # Number of clusters.
-        K = maximum(z)
-        nk = Vector{Int}(map(k -> sum(z .== k), 1:K))
-
-        # Draw the latent assignment.
-        z[i] ~ ChineseRestaurantProcess(rpm, nk)
-
-        # Create a new cluster?
-        if z[i] > K
-            push!(μ, 0.0)
-
-            # Draw location of new cluster.
-            μ[z[i]] ~ H
-        end
-
-        # Draw observation.
-        x[i] ~ Normal(μ[z[i]], 1.0)
-    end
+y_prior_samples = mapreduce(hcat, 1:100) do _
+    rand(decomp_model(t, cyclic_features, .*)).y
 end
+plot(t, y_prior_samples; linewidth=1, alpha=0.5, color=1, label="", title="Prior samples")
+scatter!(t, yf; color=2, label="Data")
 ```
 
-We can now use Turing to infer the assignments of some data points. First, we will create some random data that comes from three clusters, with means of 0, -5, and 10.
+```julia; fig_ext = ".png"
+chain = sample(decomp_model(x, cyclic_features, .*) | (; y=yg), NUTS(), 2000)
+yg_samples = predict(decomp_model(x, cyclic_features, .*), chain)
+m, conf = mean_ribbon(yg_samples)
+predictive_plt = plot(
+    t,
+    m;
+    ribbon=conf,
+    label="Posterior density",
+    title="Posterior decomposition",
+    xlabel="Time",
+    ylabel="g(t)",
+)
+scatter!(predictive_plt, t, yg; color=2, label="Data", legend=:topleft)
+
+decomp = get_decomposition(decomp_model, x, cyclic_features, chain, .*)
+decomposed_plt = plot_fit(t, yg, decomp, 0)
+plot(predictive_plt, decomposed_plt...; layout=(3, 1), size=(700, 1000))
+```
+
+The model fits! What about the infered cyclic components?
 
 ```julia
-using Plots, Random
-
-# Generate some test data.
-Random.seed!(1)
-data = vcat(randn(10), randn(10) .- 5, randn(10) .+ 10)
-data .-= mean(data)
-data /= std(data);
+βc = Array(group(chain, :βc))
+plot_cyclic_features(βc[:, begin:num_freqs, :], βc[:, (num_freqs + 1):end, :])
 ```
 
-Next, we'll sample from our posterior using SMC.
+While multiplicative model fits to the data, it does not recover the true parameters for this dataset.
 
-```julia
-# MCMC sampling
-Random.seed!(2)
-iterations = 1000
-model_fun = infiniteGMM(data);
-chain = sample(model_fun, SMC(), iterations);
-```
+# Wrapping up
 
-Finally, we can plot the number of clusters in each sample.
-
-```julia
-# Extract the number of clusters for each sample of the Markov chain.
-k = map(
-    t -> length(unique(vec(chain[t, MCMCChains.namesingroup(chain, :z), :].value))),
-    1:iterations,
-);
-
-# Visualize the number of clusters.
-plot(k; xlabel="Iteration", ylabel="Number of clusters", label="Chain 1")
-```
-
-If we visualize the histogram of the number of clusters sampled from our posterior, we observe that the model seems to prefer 3 clusters, which is the true number of clusters. Note that the number of clusters in a Dirichlet process mixture model is not limited a priori and will grow to infinity with probability one. However, if conditioned on data the posterior will concentrate on a finite number of clusters enforcing the resulting model to have a finite amount of clusters. It is, however, not given that the posterior of a Dirichlet process Gaussian mixture model converges to the true number of clusters, given that data comes from a finite mixture model. See Jeffrey Miller and Matthew Harrison: [A simple example of Dirichlet process mixture inconsitency for the number of components](https://arxiv.org/pdf/1301.2708.pdf) for details.
-
-```julia
-histogram(k; xlabel="Number of clusters", legend=false)
-```
-
-One issue with the Chinese restaurant process construction is that the number of latent parameters we need to sample scales with the number of observations. It may be desirable to use alternative constructions in certain cases. Alternative methods of constructing a Dirichlet process can be employed via the following representations:
-
-Size-Biased Sampling Process
-
-$$
-j_k \sim \mathrm{Beta}(1, \alpha) \cdot \mathrm{surplus}
-$$
-
-Stick-Breaking Process
-$$
-v_k \sim \mathrm{Beta}(1, \alpha)
-$$
-
-Chinese Restaurant Process
-$$
-p(z_n = k | z_{1:n-1}) \propto \begin{cases}
-\frac{m_k}{n-1+\alpha}, \text{ if } m_k > 0\\\
-\frac{\alpha}{n-1+\alpha}
-\end{cases}
-$$
-
-For more details see [this article](https://www.stats.ox.ac.uk/%7Eteh/research/npbayes/Teh2010a.pdf).
+In this tutorial we have seen how to implement and fit time series models using additive and multiplicative decomposition.
+We also saw how to visualise the model fit, and how to interpret learned cyclical components.
 
 ```julia, echo=false, skip="notebook"
 if isdefined(Main, :TuringTutorials)

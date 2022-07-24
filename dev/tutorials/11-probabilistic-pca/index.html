@@ -7,8 +7,8 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Probabilistic Modelling using the Infinite Mixture Model</title>
-    <meta name="description" content="In many applications it is desirable to allow the model to adjust its complexity to the amount the data. Consider for example the task of assigning objects i...">
+    <title>Probabilistic Principal Component Analysis</title>
+    <meta name="description" content="Principal component analysis is a fundamental technique to analyse and visualise data.You may have come across it in many forms and names.Here, we give a pro...">
     <meta name="author" content="The Turing Team">
     <meta name="theme-color" content="red">
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
@@ -17,7 +17,7 @@
     <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="canonical" href="/dev/tutorials/06-infinite-mixture-model/">
+    <link rel="canonical" href="/dev/tutorials/11-probabilistic-pca/">
     <link rel="alternate" type="application/rss+xml" title="Turing.jl" href="/dev/feed.xml">
     <meta name="lang:clipboard.copy" content="Copy to clipboard">
     <meta name="lang:clipboard.copied" content="Copied to clipboard">
@@ -54,7 +54,7 @@
 
     <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off>
     <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off>
-    <label class=md-overlay data-md-component=overlay for=__drawer></label> <a href="#probabilistic-modelling-using-the-infinite-mixture-model" tabindex=1 class=md-skip> Skip to content </a>
+    <label class=md-overlay data-md-component=overlay for=__drawer></label> <a href="#probabilistic-principal-component-analysis" tabindex=1 class=md-skip> Skip to content </a>
     <header class=md-header data-md-component=header data-md-state=none>
         <nav class="md-header-nav md-grid">
             <div class=md-flex>
@@ -781,10 +781,10 @@
         <ul id="nav-toc" class="md-nav__list" data-md-scrollfix="">
         <!-- toc will be appended here!-->
         </ul>
-        <a href="https://twitter.com/intent/tweet?original_referer=https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/06-infinite-mixture-model/06_infinite-mixture-model.jmd" title="Tweet this page" class="social-link"><i class="fa fa-twitter fa-1x"></i>Tweet this page</a>
+        <a href="https://twitter.com/intent/tweet?original_referer=https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/11-probabilistic-pca/11_probabilistic-pca.jmd" title="Tweet this page" class="social-link"><i class="fa fa-twitter fa-1x"></i>Tweet this page</a>
         <a href="https://discourse.julialang.org/c/domain/probprog" title="Ask questions" class="social-link"><i class="fa fa-stack-overflow fa-1x"></i>Ask questions</a>
-        <a href="https://github.com/TuringLang/Turing.jl//issues/new?label=question&title=Question:&body=Question%20on:%20https://github.com/TuringLang/Turing.jl/edit/master/docs/_tutorials/06-infinite-mixture-model/06_infinite-mixture-model.jmd" title="Report issues" class="social-link"><i class="fa fa-comments fa-1x"></i>Report issues</a>
-        <a href="https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/06-infinite-mixture-model/06_infinite-mixture-model.jmd" title="Edit this page on github"  class="social-link"><i class="fa fa-github fa-1x"></i> Edit me</a>
+        <a href="https://github.com/TuringLang/Turing.jl//issues/new?label=question&title=Question:&body=Question%20on:%20https://github.com/TuringLang/Turing.jl/edit/master/docs/_tutorials/11-probabilistic-pca/11_probabilistic-pca.jmd" title="Report issues" class="social-link"><i class="fa fa-comments fa-1x"></i>Report issues</a>
+        <a href="https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/11-probabilistic-pca/11_probabilistic-pca.jmd" title="Edit this page on github"  class="social-link"><i class="fa fa-github fa-1x"></i> Edit me</a>
       </nav>
     </div>
   </div>
@@ -793,275 +793,607 @@
                 <div id="md-container-pancakes">
                 <div class="md-content full-width"> 
     <article class="md-content__inner md-typeset  full-width">
-    In many applications it is desirable to allow the model to adjust its complexity to the amount the data. Consider for example the task of assigning objects into clusters or groups. This task often involves the specification of the number of groups. However, often times it is not known beforehand how many groups exist. Moreover, in some applictions, e.g. modelling topics in text documents or grouping species, the number of examples per group is heavy tailed. This makes it impossible to predefine the number of groups and requiring the model to form new groups when data points from previously unseen groups are observed.
+    Principal component analysis is a fundamental technique to analyse and visualise data.
+You may have come across it in many forms and names.
+Here, we give a probabilistic perspective on PCA with some biologically motivated examples.
+For more details and a mathematical derivation, we recommend Bishop's textbook (Christopher M. Bishop, Pattern Recognition and Machine Learning, 2006).
 
-A natural approach for such applications is the use of non-parametric models. This tutorial will introduce how to use the Dirichlet process in a mixture of infinitely many Gaussians using Turing. For further information on Bayesian nonparametrics and the Dirichlet process we refer to the [introduction by Zoubin Ghahramani](http://mlg.eng.cam.ac.uk/pub/pdf/Gha12.pdf) and the book "Fundamentals of Nonparametric Bayesian Inference" by Subhashis Ghosal and Aad van der Vaart.
+The idea of PCA is to find a latent variable $z$ that can be used to describe hidden structure in our dataset.
+We use a simple Gaussian prior for
+$$
+P(z) = \mathcal{N}(z | 0, I)
+$$
+and similarly, the conditional distribution
+$$
+P(x | z) = \mathcal{N}(x | W z + \mu, \sigma^2 I)
+$$
+is modeled via a Gaussian distribution.
+
+### A biologically motivated example
+
+We'll generate synthetic data to explore the models. The simulation is inspired by biological measurement of
+expression of genes in cells, and so you can think of the two variables as cells and genes.
+While the human genome is (mostly) identical between all the cells in your body, there exist interesting differences in gene expression in different human tissues and disease conditions.
+Similarly, one way to investigate certain diseases is to look at differences in gene expression in cells from patients and healthy controls (usually from the same tissue).
+
+Usually, we can assume that the changes in gene expression only affect a subset of all genes (and these can be linked to diseases in some way).
+One of the challenges of this kind of data is to see the underlying structure, e.g. to make the connection between a certain state (healthy/disease) and gene expression.
+The problem is that the space we are investigating is very large (Up to 20000 genes across 1000s of cells). So in order to find structure in this data, we usually need to project the data into a lower dimensional space.
+
+If you are not that interested in the biology, the more abstract problem formulation is to project a high-dimensional space onto a different space - in the case of PCA - a space where most of the variation is concentrated in the first few dimensions. So you will use PCA to explore underlying structure in your data that is not necessarily obvious from looking at the raw data itself.
+
+First we define our dependencies.
 
 ```julia
 using Turing
+using LinearAlgebra
+
+# Packages for visualization
+using VegaLite, DataFrames, StatsPlots
+
+# Import Fisher's iris example data set
+using RDatasets
+
+# Set a seed for reproducibility.
+using Random
+Random.seed!(1789);
 ```
 
-## Mixture Model
-
-Before introducing infinite mixture models in Turing, we will briefly review the construction of finite mixture models. Subsequently, we will define how to use the [Chinese restaurant process](https://en.wikipedia.org/wiki/Chinese_restaurant_process) construction of a Dirichlet process for non-parametric clustering.
-
-#### Two-Component Model
-
-First, consider the simple case of a mixture model with two Gaussian components with fixed covariance.
-The generative process of such a model can be written as:
-
-\begin{equation*}
-\begin{aligned}
-\pi_1 &\sim \mathrm{Beta}(a, b) \\
-\pi_2 &= 1-\pi_1 \\
-\mu_1 &\sim \mathrm{Normal}(\mu_0, \Sigma_0) \\
-\mu_2 &\sim \mathrm{Normal}(\mu_0, \Sigma_0) \\
-z_i &\sim \mathrm{Categorical}(\pi_1, \pi_2) \\
-x_i &\sim \mathrm{Normal}(\mu_{z_i}, \Sigma)
-\end{aligned}
-\end{equation*}
-
-where $\pi_1, \pi_2$ are the mixing weights of the mixture model, i.e. $\pi_1 + \pi_2 = 1$, and $z_i$ is a latent assignment of the observation $x_i$ to a component (Gaussian).
-
-We can implement this model in Turing for 1D data as follows:
+Here, we simulate the biological problem described earlier. Admittedly, this is a very simplistic example with far fewer cells and genes and a very straighforward relationship. We try to capture the essence of the problem, but then, unfortunately, real life problems tend to be much more messy.
 
 ```julia
-@model function two_model(x)
-    # Hyper-parameters
-    μ0 = 0.0
-    σ0 = 1.0
+n_cells = 60
+n_genes = 9
+mu_1 = 10.0 * ones(n_genes ÷ 3)
+mu_0 = zeros(n_genes ÷ 3)
+S = I(n_genes ÷ 3)
+mvn_0 = MvNormal(mu_0, S)
+mvn_1 = MvNormal(mu_1, S)
 
-    # Draw weights.
-    π1 ~ Beta(1, 1)
-    π2 = 1 - π1
+# create a diagonal block like expression matrix, with some non-informative genes;
+# not all features/genes are informative, some might just not differ very much between cells)
+expression_matrix = transpose(
+    vcat(
+        hcat(rand(mvn_1, n_cells ÷ 2), rand(mvn_0, n_cells ÷ 2)),
+        hcat(rand(mvn_0, n_cells ÷ 2), rand(mvn_0, n_cells ÷ 2)),
+        hcat(rand(mvn_0, n_cells ÷ 2), rand(mvn_1, n_cells ÷ 2)),
+    ),
+)
 
-    # Draw locations of the components.
-    μ1 ~ Normal(μ0, σ0)
-    μ2 ~ Normal(μ0, σ0)
+df_exp = DataFrame(expression_matrix, :auto)
+df_exp[!, :cell] = 1:n_cells
 
-    # Draw latent assignment.
-    z ~ Categorical([π1, π2])
+@vlplot(
+    :rect,
+    x = "cell:o",
+    color = :value,
+    encoding = {
+        y = {field = "variable", type = "nominal", sort = "-x", axis = {title = "gene"}}
+    }
+)(
+    DataFrames.stack(df_exp, 1:n_genes)
+)
+```
 
-    # Draw observation from selected component.
-    if z == 1
-        x ~ Normal(μ1, 1.0)
-    else
-        x ~ Normal(μ2, 1.0)
+Here, you see the simulated data. You can see two groups of cells that differ in the expression of genes. While the difference between the two groups of cells here is fairly obvious from looking at the raw data, in practice and with large enough data sets, it is often impossible to spot the differences from the raw data alone. If you have some patience and compute resources you can increase the size of the dataset, or play around with the noise levels to make the problem increasingly harder.
+
+### pPCA model
+
+```julia
+@model function pPCA(x, ::Type{TV}=Array{Float64}) where {TV}
+    # Dimensionality of the problem.
+    N, D = size(x)
+
+    # latent variable z
+    z ~ filldist(Normal(), D, N)
+
+    # side note for the curious
+    # we use the more concise filldist syntax partly for compactness, but also for compatibility with other AD
+    # backends, see the [Turing Performance Tipps](https://turing.ml/dev/docs/using-turing/performancetips)
+    # w = TV{2}(undef, D, D)
+    # for d in 1:D
+    #  w[d, :] ~ MvNormal(ones(D))
+    # end
+
+    # weights/loadings W
+    w ~ filldist(Normal(), D, D)
+
+    # mean offset
+    m ~ MvNormal(ones(D))
+    mu = (w * z .+ m)'
+    for d in 1:D
+        x[:, d] ~ MvNormal(mu[:, d], ones(N))
     end
-end
+end;
 ```
 
-#### Finite Mixture Model
+### pPCA inference
 
-If we have more than two components, this model can elegantly be extend using a Dirichlet distribution as prior for the mixing weights $\pi_1, \dots, \pi_K$. Note that the Dirichlet distribution is the multivariate generalization of the beta distribution. The resulting model can be written as:
-
-$$
-\begin{align}
-(\pi_1, \dots, \pi_K) &\sim Dirichlet(K, \alpha) \\
-\mu_k &\sim \mathrm{Normal}(\mu_0, \Sigma_0), \;\; \forall k \\
-z &\sim Categorical(\pi_1, \dots, \pi_K) \\
-x &\sim \mathrm{Normal}(\mu_z, \Sigma)
-\end{align}
-$$
-
-which resembles the model in the [Gaussian mixture model tutorial](https://turing.ml/dev/tutorials/1-gaussianmixturemodel/) with a slightly different notation.
-
-## Infinite Mixture Model
-
-The question now arises, is there a generalization of a Dirichlet distribution for which the dimensionality $K$ is infinite, i.e. $K = \infty$?
-
-But first, to implement an infinite Gaussian mixture model in Turing, we first need to load the `Turing.RandomMeasures` module. `RandomMeasures` contains a variety of tools useful in nonparametrics.
+Here, we run the inference with the NUTS sampler. Feel free to try [different samplers](https://turing.ml/stable/docs/library/#samplers).
 
 ```julia
-using Turing.RandomMeasures
+ppca = pPCA(expression_matrix)
+chain_ppca = sample(ppca, NUTS(), 500);
 ```
 
-We now will utilize the fact that one can integrate out the mixing weights in a Gaussian mixture model allowing us to arrive at the Chinese restaurant process construction. See Carl E. Rasmussen: [The Infinite Gaussian Mixture Model](https://www.seas.harvard.edu/courses/cs281/papers/rasmussen-1999a.pdf), NIPS (2000) for details.
+### pPCA control
 
-In fact, if the mixing weights are integrated out, the conditional prior for the latent variable $z$ is given by:
-
-$$
-p(z_i = k \mid z_{\not i}, \alpha) = \frac{n_k + \alpha K}{N - 1 + \alpha}
-$$
-
-where $z_{\not i}$ are the latent assignments of all observations except observation $i$. Note that we use $n_k$ to denote the number of observations at component $k$ excluding observation $i$. The parameter $\alpha$ is the concentration parameter of the Dirichlet distribution used as prior over the mixing weights.
-
-#### Chinese Restaurant Process
-
-To obtain the Chinese restaurant process construction, we can now derive the conditional prior if $K \rightarrow \infty$.
-
-For $n_k > 0$ we obtain:
-
-$$
-p(z_i = k \mid z_{\not i}, \alpha) = \frac{n_k}{N - 1 + \alpha}
-$$
-
-and for all infinitely many clusters that are empty (combined) we get:
-
-$$
-p(z_i = k \mid z_{\not i}, \alpha) = \frac{\alpha}{N - 1 + \alpha}
-$$
-
-Those equations show that the conditional prior for component assignments is proportional to the number of such observations, meaning that the Chinese restaurant process has a rich get richer property.
-
-To get a better understanding of this property, we can plot the cluster choosen by for each new observation drawn from the conditional prior.
+A quick sanity check. We reconstruct the input data from our parameter estimates, using the posterior mean as parameter estimates.
 
 ```julia
-# Concentration parameter.
-α = 10.0
+# Extract parameter estimates for plotting - mean of posterior
+w = reshape(mean(group(chain_ppca, :w))[:, 2], (n_genes, n_genes))
+z = permutedims(reshape(mean(group(chain_ppca, :z))[:, 2], (n_genes, n_cells)))'
+mu = mean(group(chain_ppca, :m))[:, 2]
 
-# Random measure, e.g. Dirichlet process.
-rpm = DirichletProcess(α)
+X = w * z
 
-# Cluster assignments for each observation.
-z = Vector{Int}()
+df_rec = DataFrame(X', :auto)
+df_rec[!, :cell] = 1:n_cells
 
-# Maximum number of observations we observe.
-Nmax = 500
+@vlplot(
+    :rect,
+    x = "cell:o",
+    color = :value,
+    encoding = {
+        y = {field = "variable", type = "nominal", sort = "-x", axis = {title = "gene"}}
+    }
+)(
+    DataFrames.stack(df_rec, 1:n_genes)
+)
+```
 
-for i in 1:Nmax
-    # Number of observations per cluster.
-    K = isempty(z) ? 0 : maximum(z)
-    nk = Vector{Int}(map(k -> sum(z .== k), 1:K))
+We can see the same pattern that we saw in the input data.
+This is what we expect, as PCA is essentially a lossless transformation, i.e. the new space contains the same information as the input space as long as we keep all the dimensions.
 
-    # Draw new assignment.
-    push!(z, rand(ChineseRestaurantProcess(rpm, nk)))
+And finally, we plot the data in a lower dimensional space. The interesting insight here is that we can project the information from the input space into a two-dimensional representation, without lossing the essential information about the two groups of cells in the input data.
+
+```julia; echo=false
+let
+    diff = X' - expression_matrix
+    @assert mean(diff[:, 4]) < 0.5
+    @assert mean(diff[:, 5]) < 0.5
+    @assert mean(diff[:, 6]) < 0.5
 end
 ```
 
 ```julia
-using Plots
+df_pca = DataFrame(z', :auto)
+rename!(df_pca, Symbol.(["z" * string(i) for i in collect(1:n_genes)]))
+df_pca[!, :cell] = 1:n_cells
 
-# Plot the cluster assignments over time 
-@gif for i in 1:Nmax
-    scatter(
-        collect(1:i),
-        z[1:i];
-        markersize=2,
-        xlabel="observation (i)",
-        ylabel="cluster (k)",
-        legend=false,
+@vlplot(:rect, "cell:o", "variable:o", color = :value)(DataFrames.stack(df_pca, 1:n_genes))
+
+df_pca[!, :type] = repeat([1, 2]; inner=n_cells ÷ 2)
+@vlplot(:point, x = :z1, y = :z2, color = "type:n")(df_pca)
+```
+
+We can see the two groups are well separated in this 2-D space. Another way to put it, 2 dimensions is enough to display the main structure of the data.
+
+## Number of components
+
+A direct question arises from this is: How many dimensions do we want to keep in order to represent the latent structure in the data?
+This is a very central question for all latent factor models, i.e. how many dimensions are needed to represent that data in the latent space.
+In the case of PCA, there exist a lot of heuristics to make that choice.
+By using the pPCA model, this can be accomplished very elegantly, with a technique called *Automatic Relevance Determination*(ARD).
+Essentially, we are using a specific prior over the factor loadings W that allows us to prune away dimensions in the
+latent space. The prior is determined by a precision hyperparameter $\alpha$. Here, smaller values of $\alpha$ correspond to more important components.
+You can find more details about this in the Bishop book mentioned in the introduction.
+
+```julia
+@model function pPCA_ARD(x, ::Type{TV}=Array{Float64}) where {TV}
+    # Dimensionality of the problem.
+    N, D = size(x)
+
+    # latent variable z
+    z ~ filldist(Normal(), D, N)
+
+    # weights/loadings w with Automatic Relevance Determination part
+    alpha ~ filldist(Gamma(1.0, 1.0), D)
+    w ~ filldist(MvNormal(zeros(D), 1.0 ./ sqrt.(alpha)), D)
+
+    mu = (w' * z)'
+
+    tau ~ Gamma(1.0, 1.0)
+    for d in 1:D
+        x[:, d] ~ MvNormal(mu[:, d], 1.0 / sqrt(tau))
+    end
+end;
+```
+
+```julia
+ppca_ARD = pPCA_ARD(expression_matrix)
+chain_pccaARD = sample(ppca_ARD, NUTS(), 500)
+
+StatsPlots.plot(group(chain_pccaARD, :alpha))
+```
+
+Here we look at the convergence of the chains for the $\alpha$ parameter. This parameter determines the relevance of individual components. We can see that the chains have converged and the posterior of the alpha parameters is centered around much smaller values in two instances. Below, we will use the mean of the small values to select the *relevant* dimensions - we can clearly see based on the values of $\alpha$ that there should be two dimensions in this example.
+
+```julia
+# Extract parameter estimates for plotting - mean of posterior
+w = permutedims(reshape(mean(group(chain_pccaARD, :w))[:, 2], (n_genes, n_genes)))
+z = permutedims(reshape(mean(group(chain_pccaARD, :z))[:, 2], (n_genes, n_cells)))'
+α = mean(group(chain_pccaARD, :alpha))[:, 2]
+α
+```
+
+We can inspect alpha to see which elements are small, i.e. have a high relevance.
+
+```julia
+alpha_indices = sortperm(α)[1:2]
+X = w[alpha_indices, alpha_indices] * z[alpha_indices, :]
+
+df_rec = DataFrame(X', :auto)
+df_rec[!, :cell] = 1:n_cells
+@vlplot(:rect, "cell:o", "variable:o", color = :value)(DataFrames.stack(df_rec, 1:2))
+
+df_pre = DataFrame(z', :auto)
+rename!(df_pre, Symbol.(["z" * string(i) for i in collect(1:n_genes)]))
+df_pre[!, :cell] = 1:n_cells
+
+@vlplot(:rect, "cell:o", "variable:o", color = :value)(DataFrames.stack(df_pre, 1:n_genes))
+
+df_pre[!, :type] = repeat([1, 2]; inner=n_cells ÷ 2)
+df_pre[!, :ard1] = df_pre[:, alpha_indices[1]]
+df_pre[!, :ard2] = df_pre[:, alpha_indices[2]]
+@vlplot(:point, x = :ard1, y = :ard2, color = "type:n")(df_pre)
+```
+
+This plot is very similar to the low-dimensional plot above, but choosing the *relevant* dimensions based on the values of $\alpha$. When you are in doubt about the number of dimensions to project onto, ARD might provide an answer to that question.
+
+## Batch effects
+
+A second, common aspect apart from the dimensionality of the PCA space, is the issue of confounding factors or [batch effects](https://en.wikipedia.org/wiki/Batch_effect).
+A batch effect occurs when non-biological factors in an experiment cause changes in the data produced by the experiment.
+As an example, we will look at Fisher's famous Iris data set.
+
+The data set consists of 50 samples each from three species of Iris (Iris setosa, Iris virginica and Iris versicolor).
+Four features were measured from each sample: the length and the width of the sepals and petals, in centimeters. [RDatasets.jl](https://github.com/JuliaStats/RDatasets.jl) contains the Iris dataset.
+
+An example for a batch effect in this case might be different scientists using a different measurement method to determine the length and width of the flowers. This can lead to a systematic bias in the measurement unrelated to the actual experimental variable - the species in this case.
+
+```julia
+# Example data set - generate synthetic gene expression data
+
+# dataset available in RDatasets
+data = dataset("datasets", "iris")
+species = data[!, "Species"]
+
+# we extract the four measured quantities
+d = 4
+dat = data[!, 1:d]
+# and the number of measurements
+n = size(dat)[1];
+```
+
+First, let's look at the original data using the pPCA model.
+
+```julia
+ppca = pPCA(dat)
+
+# Here we use a different sampler, we don't always have to use NUTS:
+# Hamiltonian Monte Carlo (HMC) sampler parameters
+ϵ = 0.05
+τ = 10
+chain_ppca2 = sample(ppca, HMC(ϵ, τ), 1000)
+
+# Extract parameter estimates for plotting - mean of posterior
+w = permutedims(reshape(mean(group(chain_ppca2, :w))[:, 2], (d, d)))
+z = permutedims(reshape(mean(group(chain_ppca2, :z))[:, 2], (d, n)))'
+mu = mean(group(chain_ppca2, :m))[:, 2]
+
+X = w * z
+# X = w * z .+ mu
+
+df_rec = DataFrame(X', :auto)
+df_rec[!, :species] = species
+@vlplot(:rect, "species:o", "variable:o", color = :value)(DataFrames.stack(df_rec, 1:d))
+
+df_iris = DataFrame(z', :auto)
+rename!(df_iris, Symbol.(["z" * string(i) for i in collect(1:d)]))
+df_iris[!, :sample] = 1:n
+df_iris[!, :species] = species
+
+@vlplot(:point, x = :z1, y = :z2, color = "species:n")(df_iris)
+```
+
+We can see that the setosa species is more clearly separated from the other two species, which overlap
+considerably.
+
+We now simulate a batch effect; imagine the person taking the measurement uses two different rulers and they are slightly off.
+Again, in practice there are many different reasons for why batch effects occur and it is not always clear what is really at the basis of them,
+nor can they always be tackled via the experimental setup. So we need methods to deal with them.
+
+```julia
+## Introduce batch effect
+batch = rand(Binomial(1, 0.5), 150)
+effect = rand(Normal(2.4, 0.6), 150)
+batch_dat = dat .+ batch .* effect
+
+ppca_batch = pPCA(batch_dat)
+chain_ppcaBatch = sample(ppca_batch, HMC(ϵ, τ), 1000)
+describe(chain_ppcaBatch)[1]
+
+z = permutedims(reshape(mean(group(chain_ppcaBatch, :z))[:, 2], (d, n)))'
+df_pre = DataFrame(z', :auto)
+rename!(df_pre, Symbol.(["z" * string(i) for i in collect(1:d)]))
+df_pre[!, :sample] = 1:n
+df_pre[!, :species] = species
+df_pre[!, :batch] = batch
+
+@vlplot(:point, x = :z1, y = :z2, color = "species:n", shape = :batch)(df_pre)
+```
+
+The batch effect makes it much harder to distinguish the species. And importantly, if we are not aware of the
+batches, this might lead us to make wrong conclusions about the data.
+
+In order to correct for the batch effect, we need to know about the assignment of measurement to batch.
+In our example, this means knowing which ruler was used for which measurement, here encoded via the batch variable.
+
+```julia
+@model function pPCA_residual(x, batch, ::Type{TV}=Array{Float64}) where {TV}
+
+    # Dimensionality of the problem.
+    N, D = size(x)
+
+    # latent variable z
+    z ~ filldist(Normal(), D, N)
+
+    # weights/loadings w
+    w ~ filldist(Normal(), D, D)
+
+    # covariate vector
+    w_batch = TV{1}(undef, D)
+    w_batch ~ MvNormal(ones(D))
+
+    # mean offset
+    m = TV{1}(undef, D)
+    m ~ MvNormal(ones(D))
+    mu = m .+ w * z + w_batch .* batch'
+
+    for d in 1:D
+        x[:, d] ~ MvNormal(mu'[:, d], ones(N))
+    end
+end;
+
+ppca_residual = pPCA_residual(batch_dat, convert(Vector{Float64}, batch))
+chain_ppcaResidual = sample(ppca_residual, HMC(ϵ, τ), 1000);
+```
+
+This model is described in considerably more detail [here](https://arxiv.org/abs/1106.4333).
+
+```julia
+z = permutedims(reshape(mean(group(chain_ppcaResidual, :z))[:, 2], (d, n)))'
+df_post = DataFrame(z', :auto)
+rename!(df_post, Symbol.(["z" * string(i) for i in collect(1:d)]))
+df_post[!, :sample] = 1:n
+df_post[!, :species] = species
+df_post[!, :batch] = batch
+
+@vlplot(:point, x = :z1, y = :z2, color = "species:n", shape = :batch)(df_post)
+```
+
+We can now see, that the data are better separated in the latent space by accounting for the batch effect. It is not perfect, but definitely an improvement over the previous plot.
+
+## Rotation Invariant Householder Parameterization for Bayesian PCA
+
+While PCA is a very old technique, nevertheless, it is still object of current research. Here, we
+demonstrate this by implementing a recent publication that removes the rotational symmetry from the posterior,
+thus speeding up inference. For more details, please read the
+[original publication](http://proceedings.mlr.press/v97/nirwan19a.html)
+
+```julia
+## helper functions for Householder transform
+function V_low_tri_plus_diag(Q::Int, V)
+    for q in 1:Q
+        V[:, q] = V[:, q] ./ sqrt(sum(V[:, q] .^ 2))
+    end
+    return (V)
+end
+
+function Householder(k::Int, V)
+    v = V[:, k]
+    sgn = sign(v[k])
+
+    v[k] += sgn
+    H = LinearAlgebra.I - (2.0 / dot(v, v) * (v * v'))
+    H[k:end, k:end] = -1.0 * sgn .* H[k:end, k:end]
+
+    return (H)
+end
+
+function H_prod_right(V)
+    D, Q = size(V)
+
+    H_prod = zeros(Real, D, D, Q + 1)
+    H_prod[:, :, 1] = Diagonal(repeat([1.0], D))
+
+    for q in 1:Q
+        H_prod[:, :, q + 1] = Householder(Q - q + 1, V) * H_prod[:, :, q]
+    end
+
+    return (H_prod)
+end
+
+function orthogonal_matrix(D::Int64, Q::Int64, V)
+    V = V_low_tri_plus_diag(Q, V)
+    H_prod = H_prod_right(V)
+
+    return (H_prod[:, 1:Q, Q + 1])
+end
+
+@model function pPCA_householder(x, K::Int, ::Type{T}=Float64) where {T}
+
+    # Dimensionality of the problem.
+    D, N = size(x)
+    @assert K <= D
+
+    # parameters
+    sigma_noise ~ LogNormal(0.0, 0.5)
+    v ~ filldist(Normal(0.0, 1.0), Int(D * K - K * (K - 1) / 2))
+    sigma ~ Bijectors.ordered(MvLogNormal(MvNormal(ones(K))))
+
+    v_mat = zeros(T, D, K)
+    v_mat[tril!(trues(size(v_mat)))] .= v
+    U = orthogonal_matrix(D, Q, v_mat)
+
+    W = zeros(T, D, K)
+    W += U * Diagonal(sigma)
+
+    Kmat = zeros(T, D, D)
+    Kmat += W * W'
+    for d in 1:D
+        Kmat[d, d] = Kmat[d, d] + sigma_noise^2 + 1e-12
+    end
+    L = LinearAlgebra.cholesky(Kmat).L
+
+    for q in 1:Q
+        r = sqrt.(sum(dot(v_mat[:, q], v_mat[:, q])))
+        Turing.@addlogprob! (-log(r) * (D - q))
+    end
+
+    Turing.@addlogprob! -0.5 * sum(sigma .^ 2) + (D - Q - 1) * sum(log.(sigma))
+    for qi in 1:Q
+        for qj in (qi + 1):Q
+            Turing.@addlogprob! log(sigma[Q - qi + 1]^2) - sigma[Q - qj + 1]^2
+        end
+    end
+    Turing.@addlogprob! sum(log.(2.0 * sigma))
+
+    L_full = zeros(T, D, D)
+    L_full += L * transpose(L)
+    # fix numerical instability (non-posdef matrix)
+    for d in 1:D
+        for k in (d + 1):D
+            L_full[d, k] = L_full[k, d]
+        end
+    end
+
+    return x ~ filldist(MvNormal(L_full), N)
+end;
+
+# Dimensionality of latent space
+Random.seed!(1789);
+Q = 2
+n_samples = 700
+ppca_householder = pPCA_householder(Matrix(dat)', Q)
+chain_ppcaHouseholder = sample(ppca_householder, NUTS(), n_samples);
+
+# Extract mean of v from chain
+N, D = size(dat)
+vv = mean(group(chain_ppcaHouseholder, :v))[:, 2]
+v_mat = zeros(Real, D, Q)
+v_mat[tril!(trues(size(v_mat)))] .= vv
+sigma = mean(group(chain_ppcaHouseholder, :sigma))[:, 2]
+U_n = orthogonal_matrix(D, Q, v_mat)
+W_n = U_n * (LinearAlgebra.I(Q) .* sigma)
+
+# Create array with projected values
+z = W_n' * transpose(Matrix(dat))
+df_post = DataFrame(convert(Array{Float64}, z)', :auto)
+rename!(df_post, Symbol.(["z" * string(i) for i in collect(1:Q)]))
+df_post[!, :sample] = 1:n
+df_post[!, :species] = species
+
+@vlplot(:point, x = :z1, y = :z2, color = "species:n")(df_post)
+```
+
+We observe a speedup in inference, and similar results to the previous implementations. Finally, we will look at the uncertainity that is associated with the samples. We will do this by sampling from the posterior projections. This is possible in the case of the rotation invariant version. If you are curious, you can try to plot the same thing in the case of classical pPCA.
+
+```julia
+## Create data projections for each step of chain
+vv = collect(get(chain_ppcaHouseholder, [:v]).v)
+v_mat = zeros(Real, D, Q)
+vv_mat = zeros(Float64, n_samples, D, Q)
+for i in 1:n_samples
+    index = BitArray(zeros(n_samples, D, Q))
+    index[i, :, :] = tril!(trues(size(v_mat)))
+    tmp = zeros(size(vv)[1])
+    for j in 1:(size(vv)[1])
+        tmp[j] = vv[j][i]
+    end
+    vv_mat[index] .= tmp
+end
+
+ss = collect(get(chain_ppcaHouseholder, [:sigma]).sigma)
+sigma = zeros(Q, n_samples)
+for d in 1:Q
+    sigma[d, :] = Array(ss[d])
+end
+
+samples_raw = Array{Float64}(undef, Q, N, n_samples)
+for i in 1:n_samples
+    U_ni = orthogonal_matrix(D, Q, vv_mat[i, :, :])
+    W_ni = U_ni * (LinearAlgebra.I(Q) .* sigma[:, i])
+    z_n = W_ni' * transpose(Matrix(dat))
+    samples_raw[:, :, i] = z_n
+end
+
+# initialize a 3D plot with 1 empty series
+plt = plot(
+    [100, 200, 300];
+    xlim=(-4.00, 7.00),
+    ylim=(-100.00, 0.00),
+    group=["Setosa", "Versicolor", "Virginica"],
+    markercolor=["red", "blue", "black"],
+    title="Visualization",
+    seriestype=:scatter,
+)
+
+anim = @animate for i in 1:n_samples
+    scatter!(
+        plt,
+        samples_raw[1, 1:50, i],
+        samples_raw[2, 1:50, i];
+        color="red",
+        seriesalpha=0.1,
+        label="",
+    )
+    scatter!(
+        plt,
+        samples_raw[1, 51:100, i],
+        samples_raw[2, 51:100, i];
+        color="blue",
+        seriesalpha=0.1,
+        label="",
+    )
+    scatter!(
+        plt,
+        samples_raw[1, 101:150, i],
+        samples_raw[2, 101:150, i];
+        color="black",
+        seriesalpha=0.1,
+        label="",
     )
 end
+gif(anim, "anim_fps.gif"; fps=5)
 ```
 
-Further, we can see that the number of clusters is logarithmic in the number of observations and data points. This is a side-effect of the "rich-get-richer" phenomenon, i.e. we expect large clusters and thus the number of clusters has to be smaller than the number of observations.
+Here we see the density of the projections from the chain to illustrate the uncertainty in the
+projections. We can see quite clearly that it is possible to separate Setosa from Versicolor and
+Virginica species, but that the latter two cannot be clearly separated based on the pPCA projection. This can be
+shown even more clearly by using a kernel density estimate and plotting the contours of that estimate.
 
-$$
-\mathbb{E}[K \mid N] \approx \alpha \cdot log \big(1 + \frac{N}{\alpha}\big)
-$$
-
-We can see from the equation that the concentration parameter $\alpha$ allows us to control the number of clusters formed *a priori*.
-
-In Turing we can implement an infinite Gaussian mixture model using the Chinese restaurant process construction of a Dirichlet process as follows:
-
-```julia
-@model function infiniteGMM(x)
-    # Hyper-parameters, i.e. concentration parameter and parameters of H.
-    α = 1.0
-    μ0 = 0.0
-    σ0 = 1.0
-
-    # Define random measure, e.g. Dirichlet process.
-    rpm = DirichletProcess(α)
-
-    # Define the base distribution, i.e. expected value of the Dirichlet process.
-    H = Normal(μ0, σ0)
-
-    # Latent assignment.
-    z = tzeros(Int, length(x))
-
-    # Locations of the infinitely many clusters.
-    μ = tzeros(Float64, 0)
-
-    for i in 1:length(x)
-
-        # Number of clusters.
-        K = maximum(z)
-        nk = Vector{Int}(map(k -> sum(z .== k), 1:K))
-
-        # Draw the latent assignment.
-        z[i] ~ ChineseRestaurantProcess(rpm, nk)
-
-        # Create a new cluster?
-        if z[i] > K
-            push!(μ, 0.0)
-
-            # Draw location of new cluster.
-            μ[z[i]] ~ H
-        end
-
-        # Draw observation.
-        x[i] ~ Normal(μ[z[i]], 1.0)
-    end
+```julia; echo=false
+let
+    m1 = mean(samples_raw[1, 1:50, :])
+    m2 = mean(samples_raw[1, 51:100, :])
+    m3 = mean(samples_raw[1, 101:150, :])
+    @assert m1 - m2 > 3
+    @assert m1 - m3 > 3
+    @assert m2 - m3 < 2
 end
 ```
 
-We can now use Turing to infer the assignments of some data points. First, we will create some random data that comes from three clusters, with means of 0, -5, and 10.
-
 ```julia
-using Plots, Random
-
-# Generate some test data.
-Random.seed!(1)
-data = vcat(randn(10), randn(10) .- 5, randn(10) .+ 10)
-data .-= mean(data)
-data /= std(data);
+# kernel density estimate
+using KernelDensity
+dens = kde((vec(samples_raw[1, :, :]), vec(samples_raw[2, :, :])))
+StatsPlots.plot(dens)
 ```
 
-Next, we'll sample from our posterior using SMC.
-
-```julia
-# MCMC sampling
-Random.seed!(2)
-iterations = 1000
-model_fun = infiniteGMM(data);
-chain = sample(model_fun, SMC(), iterations);
-```
-
-Finally, we can plot the number of clusters in each sample.
-
-```julia
-# Extract the number of clusters for each sample of the Markov chain.
-k = map(
-    t -> length(unique(vec(chain[t, MCMCChains.namesingroup(chain, :z), :].value))),
-    1:iterations,
-);
-
-# Visualize the number of clusters.
-plot(k; xlabel="Iteration", ylabel="Number of clusters", label="Chain 1")
-```
-
-If we visualize the histogram of the number of clusters sampled from our posterior, we observe that the model seems to prefer 3 clusters, which is the true number of clusters. Note that the number of clusters in a Dirichlet process mixture model is not limited a priori and will grow to infinity with probability one. However, if conditioned on data the posterior will concentrate on a finite number of clusters enforcing the resulting model to have a finite amount of clusters. It is, however, not given that the posterior of a Dirichlet process Gaussian mixture model converges to the true number of clusters, given that data comes from a finite mixture model. See Jeffrey Miller and Matthew Harrison: [A simple example of Dirichlet process mixture inconsitency for the number of components](https://arxiv.org/pdf/1301.2708.pdf) for details.
-
-```julia
-histogram(k; xlabel="Number of clusters", legend=false)
-```
-
-One issue with the Chinese restaurant process construction is that the number of latent parameters we need to sample scales with the number of observations. It may be desirable to use alternative constructions in certain cases. Alternative methods of constructing a Dirichlet process can be employed via the following representations:
-
-Size-Biased Sampling Process
-
-$$
-j_k \sim \mathrm{Beta}(1, \alpha) \cdot \mathrm{surplus}
-$$
-
-Stick-Breaking Process
-$$
-v_k \sim \mathrm{Beta}(1, \alpha)
-$$
-
-Chinese Restaurant Process
-$$
-p(z_n = k | z_{1:n-1}) \propto \begin{cases}
-\frac{m_k}{n-1+\alpha}, \text{ if } m_k > 0\\\
-\frac{\alpha}{n-1+\alpha}
-\end{cases}
-$$
-
-For more details see [this article](https://www.stats.ox.ac.uk/%7Eteh/research/npbayes/Teh2010a.pdf).
-
-```julia, echo=false, skip="notebook"
+```julia, echo=false, skip="notebook", tangle=false
 if isdefined(Main, :TuringTutorials)
     Main.TuringTutorials.tutorial_footer(WEAVE_ARGS[:folder], WEAVE_ARGS[:file])
 end

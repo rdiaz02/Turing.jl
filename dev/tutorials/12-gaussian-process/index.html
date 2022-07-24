@@ -7,8 +7,8 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Probabilistic Modelling using the Infinite Mixture Model</title>
-    <meta name="description" content="In many applications it is desirable to allow the model to adjust its complexity to the amount the data. Consider for example the task of assigning objects i...">
+    <title>Gaussian Process Latent Variable Model</title>
+    <meta name="description" content="# Gaussian Process Latent Variable Model">
     <meta name="author" content="The Turing Team">
     <meta name="theme-color" content="red">
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
@@ -17,7 +17,7 @@
     <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="canonical" href="/dev/tutorials/06-infinite-mixture-model/">
+    <link rel="canonical" href="/dev/tutorials/12-gaussian-process/">
     <link rel="alternate" type="application/rss+xml" title="Turing.jl" href="/dev/feed.xml">
     <meta name="lang:clipboard.copy" content="Copy to clipboard">
     <meta name="lang:clipboard.copied" content="Copied to clipboard">
@@ -54,7 +54,7 @@
 
     <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off>
     <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off>
-    <label class=md-overlay data-md-component=overlay for=__drawer></label> <a href="#probabilistic-modelling-using-the-infinite-mixture-model" tabindex=1 class=md-skip> Skip to content </a>
+    <label class=md-overlay data-md-component=overlay for=__drawer></label> <a href="#gaussian-process-latent-variable-model" tabindex=1 class=md-skip> Skip to content </a>
     <header class=md-header data-md-component=header data-md-state=none>
         <nav class="md-header-nav md-grid">
             <div class=md-flex>
@@ -781,10 +781,10 @@
         <ul id="nav-toc" class="md-nav__list" data-md-scrollfix="">
         <!-- toc will be appended here!-->
         </ul>
-        <a href="https://twitter.com/intent/tweet?original_referer=https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/06-infinite-mixture-model/06_infinite-mixture-model.jmd" title="Tweet this page" class="social-link"><i class="fa fa-twitter fa-1x"></i>Tweet this page</a>
+        <a href="https://twitter.com/intent/tweet?original_referer=https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/12-gaussian-process/12_gaussian-process.jmd" title="Tweet this page" class="social-link"><i class="fa fa-twitter fa-1x"></i>Tweet this page</a>
         <a href="https://discourse.julialang.org/c/domain/probprog" title="Ask questions" class="social-link"><i class="fa fa-stack-overflow fa-1x"></i>Ask questions</a>
-        <a href="https://github.com/TuringLang/Turing.jl//issues/new?label=question&title=Question:&body=Question%20on:%20https://github.com/TuringLang/Turing.jl/edit/master/docs/_tutorials/06-infinite-mixture-model/06_infinite-mixture-model.jmd" title="Report issues" class="social-link"><i class="fa fa-comments fa-1x"></i>Report issues</a>
-        <a href="https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/06-infinite-mixture-model/06_infinite-mixture-model.jmd" title="Edit this page on github"  class="social-link"><i class="fa fa-github fa-1x"></i> Edit me</a>
+        <a href="https://github.com/TuringLang/Turing.jl//issues/new?label=question&title=Question:&body=Question%20on:%20https://github.com/TuringLang/Turing.jl/edit/master/docs/_tutorials/12-gaussian-process/12_gaussian-process.jmd" title="Report issues" class="social-link"><i class="fa fa-comments fa-1x"></i>Report issues</a>
+        <a href="https://github.com/TuringLang/Turing.jl/edit/master/docs/src_tutorials/12-gaussian-process/12_gaussian-process.jmd" title="Edit this page on github"  class="social-link"><i class="fa fa-github fa-1x"></i> Edit me</a>
       </nav>
     </div>
   </div>
@@ -793,275 +793,301 @@
                 <div id="md-container-pancakes">
                 <div class="md-content full-width"> 
     <article class="md-content__inner md-typeset  full-width">
-    In many applications it is desirable to allow the model to adjust its complexity to the amount the data. Consider for example the task of assigning objects into clusters or groups. This task often involves the specification of the number of groups. However, often times it is not known beforehand how many groups exist. Moreover, in some applictions, e.g. modelling topics in text documents or grouping species, the number of examples per group is heavy tailed. This makes it impossible to predefine the number of groups and requiring the model to form new groups when data points from previously unseen groups are observed.
+    # Gaussian Process Latent Variable Model
 
-A natural approach for such applications is the use of non-parametric models. This tutorial will introduce how to use the Dirichlet process in a mixture of infinitely many Gaussians using Turing. For further information on Bayesian nonparametrics and the Dirichlet process we refer to the [introduction by Zoubin Ghahramani](http://mlg.eng.cam.ac.uk/pub/pdf/Gha12.pdf) and the book "Fundamentals of Nonparametric Bayesian Inference" by Subhashis Ghosal and Aad van der Vaart.
+In a previous tutorial, we have discussed latent variable models, in particular probabilistic principal component analysis (pPCA).
+Here, we show how we can extend the mapping provided by pPCA to non-linear mappings between input and output.
+For more details about the Gaussian Process Latent Variable Model (GPLVM),
+we refer the reader to the [original publication](https://jmlr.org/papers/v6/lawrence05a.html) and a [further extension](http://proceedings.mlr.press/v9/titsias10a/titsias10a.pdf).
+
+In short, the GPVLM is a dimensionality reduction technique that allows us to embed a high-dimensional dataset in a lower-dimensional embedding.
+Importantly, it provides the advantage that the linear mappings from the embedded space can be non-linearised through the use of Gaussian Processes.
+
+Let's start by loading some dependencies.
 
 ```julia
 using Turing
+using AbstractGPs, Random
+
+using LinearAlgebra
+using VegaLite, DataFrames, StatsPlots, StatsBase
+using RDatasets
+
+Random.seed!(1789);
 ```
 
-## Mixture Model
-
-Before introducing infinite mixture models in Turing, we will briefly review the construction of finite mixture models. Subsequently, we will define how to use the [Chinese restaurant process](https://en.wikipedia.org/wiki/Chinese_restaurant_process) construction of a Dirichlet process for non-parametric clustering.
-
-#### Two-Component Model
-
-First, consider the simple case of a mixture model with two Gaussian components with fixed covariance.
-The generative process of such a model can be written as:
-
-\begin{equation*}
-\begin{aligned}
-\pi_1 &\sim \mathrm{Beta}(a, b) \\
-\pi_2 &= 1-\pi_1 \\
-\mu_1 &\sim \mathrm{Normal}(\mu_0, \Sigma_0) \\
-\mu_2 &\sim \mathrm{Normal}(\mu_0, \Sigma_0) \\
-z_i &\sim \mathrm{Categorical}(\pi_1, \pi_2) \\
-x_i &\sim \mathrm{Normal}(\mu_{z_i}, \Sigma)
-\end{aligned}
-\end{equation*}
-
-where $\pi_1, \pi_2$ are the mixing weights of the mixture model, i.e. $\pi_1 + \pi_2 = 1$, and $z_i$ is a latent assignment of the observation $x_i$ to a component (Gaussian).
-
-We can implement this model in Turing for 1D data as follows:
+We demonstrate the GPLVM with a very small dataset: [Fisher's Iris data set](https://en.wikipedia.org/wiki/Iris_flower_data_set).
+This is mostly for reasons of run time, so the tutorial can be run quickly.
+As you will see, one of the major drawbacks of using GPs is their speed,
+although this is an active area of research.
+We will briefly touch on some ways to speed things up at the end of this tutorial.
+We transform the original data with non-linear operations in order to demonstrate the power of GPs to work on non-linear relationships, while keeping the problem reasonably small.
 
 ```julia
-@model function two_model(x)
-    # Hyper-parameters
-    μ0 = 0.0
-    σ0 = 1.0
+data = dataset("datasets", "iris")
+species = data[!, "Species"]
+index = shuffle(1:150)
+# we extract the four measured quantities,
+# so the dimension of the data is only d=4 for this toy example
+dat = Matrix(data[index, 1:4])
+labels = data[index, "Species"]
 
-    # Draw weights.
-    π1 ~ Beta(1, 1)
-    π2 = 1 - π1
+# non-linearize data to demonstrate ability of GPs to deal with non-linearity
+dat[:, 1] = 0.5 * dat[:, 1] .^ 2 + 0.1 * dat[:, 1] .^ 3
+dat[:, 2] = dat[:, 2] .^ 3 + 0.2 * dat[:, 2] .^ 4
+dat[:, 3] = 0.1 * exp.(dat[:, 3]) - 0.2 * dat[:, 3] .^ 2
+dat[:, 4] = 0.5 * log.(dat[:, 4]) .^ 2 + 0.01 * dat[:, 3] .^ 5
 
-    # Draw locations of the components.
-    μ1 ~ Normal(μ0, σ0)
-    μ2 ~ Normal(μ0, σ0)
+# normalize data
+dt = fit(ZScoreTransform, dat; dims=1);
+StatsBase.transform!(dt, dat);
+```
 
-    # Draw latent assignment.
-    z ~ Categorical([π1, π2])
+We will start out by demonstrating the basic similarity between pPCA (see the tutorial on this topic) and the GPLVM model.
+Indeed, pPCA is basically equivalent to running the GPLVM model with an automatic relevance determination (ARD) linear kernel.
 
-    # Draw observation from selected component.
-    if z == 1
-        x ~ Normal(μ1, 1.0)
-    else
-        x ~ Normal(μ2, 1.0)
+First, we re-introduce the pPCA model (see the tutorial on pPCA for details)
+
+```julia
+@model function pPCA(x, ::Type{TV}=Array{Float64}) where {TV}
+    # Dimensionality of the problem.
+    N, D = size(x)
+    # latent variable z
+    z ~ filldist(Normal(), D, N)
+    # weights/loadings W
+    w ~ filldist(Normal(), D, D)
+    mu = (w * z)'
+    for d in 1:D
+        x[:, d] ~ MvNormal(mu[:, d], I)
     end
+end;
+```
+
+We define two different kernels, a simple linear kernel with an Automatic Relevance Determination transform and a
+squared exponential kernel.
+
+```julia
+linear_kernel(α) = LinearKernel() ∘ ARDTransform(α)
+sekernel(α, σ) = σ * SqExponentialKernel() ∘ ARDTransform(α);
+```
+
+And here is the GPLVM model.
+We create separate models for the two types of kernel.
+
+```julia
+@model function GPLVM_linear(Y, K=4, ::Type{T}=Float64) where {T}
+
+    # Dimensionality of the problem.
+    N, D = size(Y)
+    # K is the dimension of the latent space
+    @assert K <= D
+    noise = 1e-3
+
+    # Priors
+    α ~ MvLogNormal(MvNormal(zeros(K), I))
+    Z ~ filldist(Normal(), K, N)
+    mu ~ filldist(Normal(), N)
+
+    kernel = linear_kernel(α)
+
+    gp = GP(mu, kernel)
+    cv = cov(gp(ColVecs(Z), noise))
+    return Y ~ filldist(MvNormal(mu, cv), D)
+end;
+
+@model function GPLVM(Y, K=4, ::Type{T}=Float64) where {T}
+
+    # Dimensionality of the problem.
+    N, D = size(Y)
+    # K is the dimension of the latent space
+    @assert K <= D
+    noise = 1e-3
+
+    # Priors
+    α ~ MvLogNormal(MvNormal(zeros(K), I))
+    σ ~ LogNormal(0.0, 1.0)
+    Z ~ filldist(Normal(), K, N)
+    mu ~ filldist(Normal(), N)
+
+    kernel = sekernel(α, σ)
+
+    gp = GP(mu, kernel)
+    cv = cov(gp(ColVecs(Z), noise))
+    return Y ~ filldist(MvNormal(mu, cv), D)
+end;
+```
+
+```julia
+# Standard GPs don't scale very well in n, so we use a small subsample for the purpose of this tutorial
+n_data = 40
+# number of features to use from dataset
+n_features = 4
+# latent dimension for GP case
+ndim = 4;
+```
+
+```julia
+ppca = pPCA(dat[1:n_data, 1:n_features])
+chain_ppca = sample(ppca, NUTS(), 1000);
+```
+
+```julia
+# we extract the posterior mean estimates of the parameters from the chain
+w = reshape(mean(group(chain_ppca, :w))[:, 2], (n_features, n_features))
+z = reshape(mean(group(chain_ppca, :z))[:, 2], (n_features, n_data))
+X = w * z
+
+df_pre = DataFrame(z', :auto)
+rename!(df_pre, Symbol.(["z" * string(i) for i in collect(1:n_features)]))
+df_pre[!, :type] = labels[1:n_data]
+p_ppca = @vlplot(:point, x = :z1, y = :z2, color = "type:n")(df_pre)
+```
+
+We can see that the pPCA fails to distinguish the groups.
+In particular, the `setosa` species is not clearly separated from `versicolor` and `virginica`.
+This is due to the non-linearities that we introduced, as without them the two groups can be clearly distinguished
+using pPCA (see the pPCA tutorial).
+
+Let's try the same with our linear kernel GPLVM model.
+
+```julia
+gplvm_linear = GPLVM_linear(dat[1:n_data, 1:n_features], ndim)
+
+chain_linear = sample(gplvm_linear, NUTS(), 500)
+# we extract the posterior mean estimates of the parameters from the chain
+z_mean = reshape(mean(group(chain_linear, :Z))[:, 2], (n_features, n_data))
+alpha_mean = mean(group(chain_linear, :α))[:, 2]
+```
+
+```julia
+df_gplvm_linear = DataFrame(z_mean', :auto)
+rename!(df_gplvm_linear, Symbol.(["z" * string(i) for i in collect(1:ndim)]))
+df_gplvm_linear[!, :sample] = 1:n_data
+df_gplvm_linear[!, :labels] = labels[1:n_data]
+alpha_indices = sortperm(alpha_mean; rev=true)[1:2]
+println(alpha_indices)
+df_gplvm_linear[!, :ard1] = z_mean[alpha_indices[1], :]
+df_gplvm_linear[!, :ard2] = z_mean[alpha_indices[2], :]
+
+p_linear = @vlplot(:point, x = :ard1, y = :ard2, color = "labels:n")(df_gplvm_linear)
+p_linear
+```
+
+We can see that similar to the pPCA case, the linear kernel GPLVM fails to distinguish between the two groups
+(`setosa` on the one hand, and `virginica` and `verticolor` on the other).
+
+Finally, we demonstrate that by changing the kernel to a non-linear function, we are able to separate the data again.
+
+```julia
+gplvm = GPLVM(dat[1:n_data, 1:n_features], ndim)
+
+chain_gplvm = sample(gplvm, NUTS(), 500)
+# we extract the posterior mean estimates of the parameters from the chain
+z_mean = reshape(mean(group(chain_gplvm, :Z))[:, 2], (ndim, n_data))
+alpha_mean = mean(group(chain_gplvm, :α))[:, 2]
+```
+
+```julia
+df_gplvm = DataFrame(z_mean', :auto)
+rename!(df_gplvm, Symbol.(["z" * string(i) for i in collect(1:ndim)]))
+df_gplvm[!, :sample] = 1:n_data
+df_gplvm[!, :labels] = labels[1:n_data]
+alpha_indices = sortperm(alpha_mean; rev=true)[1:2]
+println(alpha_indices)
+df_gplvm[!, :ard1] = z_mean[alpha_indices[1], :]
+df_gplvm[!, :ard2] = z_mean[alpha_indices[2], :]
+
+p_gplvm = @vlplot(:point, x = :ard1, y = :ard2, color = "labels:n")(df_gplvm)
+p_gplvm
+```
+
+```julia; echo=false
+let
+    @assert abs(
+        mean(z_mean[alpha_indices[1], labels[1:n_data] .== "setosa"]) -
+        mean(z_mean[alpha_indices[1], labels[1:n_data] .!= "setosa"]),
+    ) > 1.4
 end
 ```
 
-#### Finite Mixture Model
+Now, the split between the two groups is visible again.
 
-If we have more than two components, this model can elegantly be extend using a Dirichlet distribution as prior for the mixing weights $\pi_1, \dots, \pi_K$. Note that the Dirichlet distribution is the multivariate generalization of the beta distribution. The resulting model can be written as:
+### Speeding up inference
 
-$$
-\begin{align}
-(\pi_1, \dots, \pi_K) &\sim Dirichlet(K, \alpha) \\
-\mu_k &\sim \mathrm{Normal}(\mu_0, \Sigma_0), \;\; \forall k \\
-z &\sim Categorical(\pi_1, \dots, \pi_K) \\
-x &\sim \mathrm{Normal}(\mu_z, \Sigma)
-\end{align}
-$$
-
-which resembles the model in the [Gaussian mixture model tutorial](https://turing.ml/dev/tutorials/1-gaussianmixturemodel/) with a slightly different notation.
-
-## Infinite Mixture Model
-
-The question now arises, is there a generalization of a Dirichlet distribution for which the dimensionality $K$ is infinite, i.e. $K = \infty$?
-
-But first, to implement an infinite Gaussian mixture model in Turing, we first need to load the `Turing.RandomMeasures` module. `RandomMeasures` contains a variety of tools useful in nonparametrics.
+Gaussian processes tend to be slow, as they naively require operations in the order of $O(n^3)$.
+Here, we demonstrate a simple speedup using the Stheno library.
+Speeding up Gaussian process inference is an active area of research.
 
 ```julia
-using Turing.RandomMeasures
-```
+using Stheno
+@model function GPLVM_sparse(Y, K, ::Type{T}=Float64) where {T}
 
-We now will utilize the fact that one can integrate out the mixing weights in a Gaussian mixture model allowing us to arrive at the Chinese restaurant process construction. See Carl E. Rasmussen: [The Infinite Gaussian Mixture Model](https://www.seas.harvard.edu/courses/cs281/papers/rasmussen-1999a.pdf), NIPS (2000) for details.
+    # Dimensionality of the problem.
+    N, D = size(Y)
+    # dimension of latent space
+    @assert K <= D
+    # number of inducing points
+    n_inducing = 25
+    noise = 1e-3
 
-In fact, if the mixing weights are integrated out, the conditional prior for the latent variable $z$ is given by:
+    # Priors
+    α ~ MvLogNormal(MvNormal(zeros(K), I))
+    σ ~ LogNormal(1.0, 1.0)
+    Z ~ filldist(Normal(), K, N)
+    mu ~ filldist(Normal(), N)
 
-$$
-p(z_i = k \mid z_{\not i}, \alpha) = \frac{n_k + \alpha K}{N - 1 + \alpha}
-$$
+    kernel = σ * SqExponentialKernel() ∘ ARDTransform(α)
 
-where $z_{\not i}$ are the latent assignments of all observations except observation $i$. Note that we use $n_k$ to denote the number of observations at component $k$ excluding observation $i$. The parameter $\alpha$ is the concentration parameter of the Dirichlet distribution used as prior over the mixing weights.
+    ## Standard
+    # gpc = GPC()
+    # f = atomic(GP(kernel), gpc)
+    # gp = f(ColVecs(Z), noise)
+    # Y ~ filldist(gp, D)
 
-#### Chinese Restaurant Process
-
-To obtain the Chinese restaurant process construction, we can now derive the conditional prior if $K \rightarrow \infty$.
-
-For $n_k > 0$ we obtain:
-
-$$
-p(z_i = k \mid z_{\not i}, \alpha) = \frac{n_k}{N - 1 + \alpha}
-$$
-
-and for all infinitely many clusters that are empty (combined) we get:
-
-$$
-p(z_i = k \mid z_{\not i}, \alpha) = \frac{\alpha}{N - 1 + \alpha}
-$$
-
-Those equations show that the conditional prior for component assignments is proportional to the number of such observations, meaning that the Chinese restaurant process has a rich get richer property.
-
-To get a better understanding of this property, we can plot the cluster choosen by for each new observation drawn from the conditional prior.
-
-```julia
-# Concentration parameter.
-α = 10.0
-
-# Random measure, e.g. Dirichlet process.
-rpm = DirichletProcess(α)
-
-# Cluster assignments for each observation.
-z = Vector{Int}()
-
-# Maximum number of observations we observe.
-Nmax = 500
-
-for i in 1:Nmax
-    # Number of observations per cluster.
-    K = isempty(z) ? 0 : maximum(z)
-    nk = Vector{Int}(map(k -> sum(z .== k), 1:K))
-
-    # Draw new assignment.
-    push!(z, rand(ChineseRestaurantProcess(rpm, nk)))
+    ## SPARSE GP
+    #  xu = reshape(repeat(locations, K), :, K) # inducing points
+    #  xu = reshape(repeat(collect(range(-2.0, 2.0; length=20)), K), :, K) # inducing points
+    lbound = minimum(Y) + 1e-6
+    ubound = maximum(Y) - 1e-6
+    #  locations ~ filldist(Uniform(lbound, ubound), n_inducing)
+    #  locations = [-2., -1.5 -1., -0.5, -0.25, 0.25, 0.5, 1., 2.]
+    #  locations = collect(LinRange(lbound, ubound, n_inducing))
+    locations = quantile(vec(Y), LinRange(0.01, 0.99, n_inducing))
+    xu = reshape(locations, 1, :)
+    gp = atomic(GP(kernel), GPC())
+    fobs = gp(ColVecs(Z), noise)
+    finducing = gp(xu, 1e-12)
+    sfgp = SparseFiniteGP(fobs, finducing)
+    cv = cov(sfgp.fobs)
+    return Y ~ filldist(MvNormal(mu, cv), D)
 end
 ```
 
 ```julia
-using Plots
+n_data = 50
+gplvm_sparse = GPLVM_sparse(dat[1:n_data, :], ndim)
 
-# Plot the cluster assignments over time 
-@gif for i in 1:Nmax
-    scatter(
-        collect(1:i),
-        z[1:i];
-        markersize=2,
-        xlabel="observation (i)",
-        ylabel="cluster (k)",
-        legend=false,
-    )
-end
+chain_gplvm_sparse = sample(gplvm_sparse, NUTS(), 500)
+# we extract the posterior mean estimates of the parameters from the chain
+z_mean = reshape(mean(group(chain_gplvm_sparse, :Z))[:, 2], (ndim, n_data))
+alpha_mean = mean(group(chain_gplvm_sparse, :α))[:, 2]
 ```
-
-Further, we can see that the number of clusters is logarithmic in the number of observations and data points. This is a side-effect of the "rich-get-richer" phenomenon, i.e. we expect large clusters and thus the number of clusters has to be smaller than the number of observations.
-
-$$
-\mathbb{E}[K \mid N] \approx \alpha \cdot log \big(1 + \frac{N}{\alpha}\big)
-$$
-
-We can see from the equation that the concentration parameter $\alpha$ allows us to control the number of clusters formed *a priori*.
-
-In Turing we can implement an infinite Gaussian mixture model using the Chinese restaurant process construction of a Dirichlet process as follows:
 
 ```julia
-@model function infiniteGMM(x)
-    # Hyper-parameters, i.e. concentration parameter and parameters of H.
-    α = 1.0
-    μ0 = 0.0
-    σ0 = 1.0
-
-    # Define random measure, e.g. Dirichlet process.
-    rpm = DirichletProcess(α)
-
-    # Define the base distribution, i.e. expected value of the Dirichlet process.
-    H = Normal(μ0, σ0)
-
-    # Latent assignment.
-    z = tzeros(Int, length(x))
-
-    # Locations of the infinitely many clusters.
-    μ = tzeros(Float64, 0)
-
-    for i in 1:length(x)
-
-        # Number of clusters.
-        K = maximum(z)
-        nk = Vector{Int}(map(k -> sum(z .== k), 1:K))
-
-        # Draw the latent assignment.
-        z[i] ~ ChineseRestaurantProcess(rpm, nk)
-
-        # Create a new cluster?
-        if z[i] > K
-            push!(μ, 0.0)
-
-            # Draw location of new cluster.
-            μ[z[i]] ~ H
-        end
-
-        # Draw observation.
-        x[i] ~ Normal(μ[z[i]], 1.0)
-    end
-end
+df_gplvm_sparse = DataFrame(z_mean', :auto)
+rename!(df_gplvm_sparse, Symbol.(["z" * string(i) for i in collect(1:ndim)]))
+df_gplvm_sparse[!, :sample] = 1:n_data
+df_gplvm_sparse[!, :labels] = labels[1:n_data]
+alpha_indices = sortperm(alpha_mean; rev=true)[1:2]
+df_gplvm_sparse[!, :ard1] = z_mean[alpha_indices[1], :]
+df_gplvm_sparse[!, :ard2] = z_mean[alpha_indices[2], :]
+p_sparse = @vlplot(:point, x = :ard1, y = :ard2, color = "labels:n")(df_gplvm_sparse)
+p_sparse
 ```
 
-We can now use Turing to infer the assignments of some data points. First, we will create some random data that comes from three clusters, with means of 0, -5, and 10.
+Comparing the runtime, between the two versions, we can observe a clear speed-up with the sparse version.
 
-```julia
-using Plots, Random
-
-# Generate some test data.
-Random.seed!(1)
-data = vcat(randn(10), randn(10) .- 5, randn(10) .+ 10)
-data .-= mean(data)
-data /= std(data);
-```
-
-Next, we'll sample from our posterior using SMC.
-
-```julia
-# MCMC sampling
-Random.seed!(2)
-iterations = 1000
-model_fun = infiniteGMM(data);
-chain = sample(model_fun, SMC(), iterations);
-```
-
-Finally, we can plot the number of clusters in each sample.
-
-```julia
-# Extract the number of clusters for each sample of the Markov chain.
-k = map(
-    t -> length(unique(vec(chain[t, MCMCChains.namesingroup(chain, :z), :].value))),
-    1:iterations,
-);
-
-# Visualize the number of clusters.
-plot(k; xlabel="Iteration", ylabel="Number of clusters", label="Chain 1")
-```
-
-If we visualize the histogram of the number of clusters sampled from our posterior, we observe that the model seems to prefer 3 clusters, which is the true number of clusters. Note that the number of clusters in a Dirichlet process mixture model is not limited a priori and will grow to infinity with probability one. However, if conditioned on data the posterior will concentrate on a finite number of clusters enforcing the resulting model to have a finite amount of clusters. It is, however, not given that the posterior of a Dirichlet process Gaussian mixture model converges to the true number of clusters, given that data comes from a finite mixture model. See Jeffrey Miller and Matthew Harrison: [A simple example of Dirichlet process mixture inconsitency for the number of components](https://arxiv.org/pdf/1301.2708.pdf) for details.
-
-```julia
-histogram(k; xlabel="Number of clusters", legend=false)
-```
-
-One issue with the Chinese restaurant process construction is that the number of latent parameters we need to sample scales with the number of observations. It may be desirable to use alternative constructions in certain cases. Alternative methods of constructing a Dirichlet process can be employed via the following representations:
-
-Size-Biased Sampling Process
-
-$$
-j_k \sim \mathrm{Beta}(1, \alpha) \cdot \mathrm{surplus}
-$$
-
-Stick-Breaking Process
-$$
-v_k \sim \mathrm{Beta}(1, \alpha)
-$$
-
-Chinese Restaurant Process
-$$
-p(z_n = k | z_{1:n-1}) \propto \begin{cases}
-\frac{m_k}{n-1+\alpha}, \text{ if } m_k > 0\\\
-\frac{\alpha}{n-1+\alpha}
-\end{cases}
-$$
-
-For more details see [this article](https://www.stats.ox.ac.uk/%7Eteh/research/npbayes/Teh2010a.pdf).
-
-```julia, echo=false, skip="notebook"
+```julia, echo=false, skip="notebook", tangle=false
 if isdefined(Main, :TuringTutorials)
     Main.TuringTutorials.tutorial_footer(WEAVE_ARGS[:folder], WEAVE_ARGS[:file])
 end
