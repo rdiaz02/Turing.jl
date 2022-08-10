@@ -829,16 +829,16 @@
 
 <p>First, we explain how Importance Sampling works in the abstract. Consider the model defined in the first code block. Mathematically, it can be written:</p>
 
-\[\begin{align}
-s &amp;\sim \text{InverseGamma}(2, 3), \\
-m &amp;\sim \text{Normal}(0, \sqrt{s}), \\
-x &amp;\sim \text{Normal}(m, \sqrt{s}), \\
-y &amp;\sim \text{Normal}(m, \sqrt{s}),
-\end{align}\]
+\[\begin{align*}
+s &amp;\sim \text{InverseGamma}(2, 3), \\\\
+m &amp;\sim \text{Normal}(0, \sqrt{s}), \\\\
+x &amp;\sim \text{Normal}(m, \sqrt{s}), \\\\
+y &amp;\sim \text{Normal}(m, \sqrt{s}).
+\end{align*}\]
 
-<p>The <strong>latent</strong> variables are \(s\) and \(m\), the <strong>observed</strong> variables are \(x\) and \(y\). The model <strong>joint</strong> distribution \(p(s,m,x,y)\) decomposes into the <strong>prior</strong> \(p(s,m)\) and the <strong>likelihood</strong> \(p(x,y \mid s,m).\) Since \(x = 1.5\) and \(y = 2\) are observed, the goal is to infer the <strong>posterior</strong> distribution \(p(s,m \mid x,y).\)</p>
+<p>The <strong>latent</strong> variables are $s$ and $m$, the <strong>observed</strong> variables are $x$ and $y$. The model <strong>joint</strong> distribution $p(s,m,x,y)$ decomposes into the <strong>prior</strong> $p(s,m)$ and the <strong>likelihood</strong> $p(x,y \mid s,m).$ Since $x = 1.5$ and $y = 2$ are observed, the goal is to infer the <strong>posterior</strong> distribution $p(s,m \mid x,y).$</p>
 
-<p>Importance Sampling produces independent samples \((s_i, m_i)\) from the prior distribution. It also outputs unnormalized weights</p>
+<p>Importance Sampling produces independent samples $(s_i, m_i)$ from the prior distribution. It also outputs unnormalized weights</p>
 
 \[w_i = \frac {p(x,y,s_i,m_i)} {p(s_i, m_i)} = p(x,y \mid s_i, m_i)\]
 
@@ -957,7 +957,7 @@ y &amp;\sim \text{Normal}(m, \sqrt{s}),
 
 <ul>
   <li>it is used to <strong>normalize</strong> the <strong>empirical approximation</strong> of the posterior distribution</li>
-  <li>its logarithm is the importance sampling <strong>estimate</strong> of the <strong>log evidence</strong> \(\log p(x, y)\)</li>
+  <li>its logarithm is the importance sampling <strong>estimate</strong> of the <strong>log evidence</strong> $\log p(x, y)$</li>
 </ul>
 
 <p>To avoid having to compute it over and over again, <code class="language-plaintext highlighter-rouge">is.jl</code>defines an IS-specific concrete type <code class="language-plaintext highlighter-rouge">ISState</code> for sampler states, with an additional field <code class="language-plaintext highlighter-rouge">final_logevidence</code> containing</p>
@@ -994,7 +994,7 @@ y &amp;\sim \text{Normal}(m, \sqrt{s}),
 <p><code class="language-plaintext highlighter-rouge">AbstractMCMC</code> stores information corresponding to each individual sample in objects called <code class="language-plaintext highlighter-rouge">transition</code>, but does not specify what the structure of these objects could be. You could decide to implement a type <code class="language-plaintext highlighter-rouge">MyTransition</code> for transitions corresponding to the specifics of your methods. However, there are many situations in which the only information you need for each sample is:</p>
 
 <ul>
-  <li>its value: \(\theta\)</li>
+  <li>its value: $\theta$</li>
   <li>log of the joint probability of the observed data and this sample: <code class="language-plaintext highlighter-rouge">lp</code></li>
 </ul>
 
@@ -1006,7 +1006,7 @@ y &amp;\sim \text{Normal}(m, \sqrt{s}),
 <span class="k">end</span>
 </code></pre></div></div>
 
-<p>It also <a href="https://github.com/TuringLang/Turing.jl/blob/master/src/inference/Inference.jl#L108">contains</a> a constructor that builds an instance of <code class="language-plaintext highlighter-rouge">Transition</code> from an instance <code class="language-plaintext highlighter-rouge">spl</code> of <code class="language-plaintext highlighter-rouge">Sampler</code>: \(\theta\) is <code class="language-plaintext highlighter-rouge">spl.state.vi</code> converted to a <code class="language-plaintext highlighter-rouge">namedtuple</code>, and <code class="language-plaintext highlighter-rouge">lp</code> is <code class="language-plaintext highlighter-rouge">getlogp(spl.state.vi)</code>. <code class="language-plaintext highlighter-rouge">is.jl</code> uses this default constructor at the end of the <code class="language-plaintext highlighter-rouge">step!</code> function <a href="https://github.com/TuringLang/Turing.jl/blob/master/src/inference/is.jl#L58">here</a>.</p>
+<p>It also <a href="https://github.com/TuringLang/Turing.jl/blob/master/src/inference/Inference.jl#L108">contains</a> a constructor that builds an instance of <code class="language-plaintext highlighter-rouge">Transition</code> from an instance <code class="language-plaintext highlighter-rouge">spl</code> of <code class="language-plaintext highlighter-rouge">Sampler</code>: $\theta$ is <code class="language-plaintext highlighter-rouge">spl.state.vi</code> converted to a <code class="language-plaintext highlighter-rouge">namedtuple</code>, and <code class="language-plaintext highlighter-rouge">lp</code> is <code class="language-plaintext highlighter-rouge">getlogp(spl.state.vi)</code>. <code class="language-plaintext highlighter-rouge">is.jl</code> uses this default constructor at the end of the <code class="language-plaintext highlighter-rouge">step!</code> function <a href="https://github.com/TuringLang/Turing.jl/blob/master/src/inference/is.jl#L58">here</a>.</p>
 
 <p><a id="How-sample-works"></a></p>
 
@@ -1045,7 +1045,7 @@ y &amp;\sim \text{Normal}(m, \sqrt{s}),
 
 \[p\left(\theta_{\text{prop}}, x_{\text{obs}}\right)\]
 
-<p>with \(\theta_{\text{prop}}\) a sample from the proposal and \(x_{\text{obs}}\) the observed data.</p>
+<p>with $\theta_{\text{prop}}$ a sample from the proposal and $x_{\text{obs}}$ the observed data.</p>
 
 <p>This begs the question: how can these functions access model information during sampling? Recall that the model is stored as an instance <code class="language-plaintext highlighter-rouge">m</code> of <code class="language-plaintext highlighter-rouge">Model</code>. One of the attributes of <code class="language-plaintext highlighter-rouge">m</code> is the model evaluation function <code class="language-plaintext highlighter-rouge">m.f</code>, which is built by compiling the <code class="language-plaintext highlighter-rouge">@model</code> macro. Executing <code class="language-plaintext highlighter-rouge">f</code> runs the tilde statements of the model in order, and adds model information to the sampler (the instance of <code class="language-plaintext highlighter-rouge">Sampler</code> that stores information about the ongoing sampling process) at each step (see <a href="https://turing.ml/dev/docs/for-developers/compiler">here</a> for more information about how the <code class="language-plaintext highlighter-rouge">@model</code> macro is compiled). The DynamicPPL functions <code class="language-plaintext highlighter-rouge">assume</code> and <code class="language-plaintext highlighter-rouge">observe</code> determine what kind of information to add to the sampler for every tilde statement.</p>
 
@@ -1094,7 +1094,7 @@ y &amp;\sim \text{Normal}(m, \sqrt{s}),
 
 <ul>
   <li>
-    <p>During the \(i\)-th iteration, <code class="language-plaintext highlighter-rouge">step!</code> does 3 things:</p>
+    <p>During the $i$-th iteration, <code class="language-plaintext highlighter-rouge">step!</code> does 3 things:</p>
 
     <ul>
       <li><code class="language-plaintext highlighter-rouge">empty!!(spl.state.vi)</code>: remove information about the previous sample from the sampler’s <code class="language-plaintext highlighter-rouge">VarInfo</code></li>
@@ -1102,10 +1102,10 @@ y &amp;\sim \text{Normal}(m, \sqrt{s}),
         <p><code class="language-plaintext highlighter-rouge">model(rng, spl.state.vi, spl)</code>: call the model evaluation function</p>
 
         <ul>
-          <li>calls to <code class="language-plaintext highlighter-rouge">assume</code> add the samples from the prior \(s_i\) and \(m_i\) to <code class="language-plaintext highlighter-rouge">spl.state.vi</code></li>
+          <li>calls to <code class="language-plaintext highlighter-rouge">assume</code> add the samples from the prior $s_i$ and $m_i$ to <code class="language-plaintext highlighter-rouge">spl.state.vi</code></li>
           <li>calls to both <code class="language-plaintext highlighter-rouge">assume</code> or <code class="language-plaintext highlighter-rouge">observe</code> are followed by the line <code class="language-plaintext highlighter-rouge">acclogp!!(vi, lp)</code>, where <code class="language-plaintext highlighter-rouge">lp</code> is an output of <code class="language-plaintext highlighter-rouge">assume</code> and <code class="language-plaintext highlighter-rouge">observe</code></li>
           <li><code class="language-plaintext highlighter-rouge">lp</code> is set to 0 after <code class="language-plaintext highlighter-rouge">assume</code>, and to the value of the density at the observation after <code class="language-plaintext highlighter-rouge">observe</code></li>
-          <li>when all the tilde statements have been covered, <code class="language-plaintext highlighter-rouge">spl.state.vi.logp[]</code> is the sum of the <code class="language-plaintext highlighter-rouge">lp</code>, i.e., the likelihood \(\log p(x, y \mid s_i, m_i) = \log p(x \mid s_i, m_i) + \log p(y \mid s_i, m_i)\) of the observations given the latent variable samples \(s_i\) and \(m_i\).</li>
+          <li>when all the tilde statements have been covered, <code class="language-plaintext highlighter-rouge">spl.state.vi.logp[]</code> is the sum of the <code class="language-plaintext highlighter-rouge">lp</code>, i.e., the likelihood $\log p(x, y \mid s_i, m_i) = \log p(x \mid s_i, m_i) + \log p(y \mid s_i, m_i)$ of the observations given the latent variable samples $s_i$ and $m_i$.</li>
         </ul>
       </li>
       <li>
